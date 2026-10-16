@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Guided prototype of Finds, a Shazam concept that turns tagged songs into songs you actually listen to.">
+<title>Shazam Finds Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: guided walkthrough on the left, a live phone on the right; stacks phone-first on narrow screens */
+:root{
+  --bg:#eef3fa; --surface:#ffffff; --ink:#0f1a2b; --muted:#56637a; --line:#d6dfec;
+  --accent:#0a66f0; --accent-soft:#e2ecfd; --good:#12805c;
+  --display:"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --body:"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+  /* phone UI: a fixed light iOS-style look in both page themes */
+  --app-bg:#f4f6fa; --app-card:#ffffff; --app-ink:#0b1424; --app-muted:#6a7487; --app-line:#e3e8f0;
+  --app-blue:#0a6cff; --app-blue-2:#1546d6; --hardware:#0b0d12;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0a111d; --surface:#121b2b; --ink:#e7edf7; --muted:#9aa8bf; --line:#24314a;
+    --accent:#5b9bff; --accent-soft:#16284a; --good:#4cc79a; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0a111d; --surface:#121b2b; --ink:#e7edf7; --muted:#9aa8bf; --line:#24314a;
+  --accent:#5b9bff; --accent-soft:#16284a; --good:#4cc79a; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 40px}
+.wrap{max-width:1080px;margin:0 auto;display:grid;gap:20px}
+.top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:12px}
+.top .name{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.01em}
+.top .note{font-size:12.5px;color:var(--muted)}
+.top a{color:var(--accent)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:40px;align-items:start}
+@media (max-width:860px){.stage{grid-template-columns:minmax(0,1fr)}.phone-col{order:-1;justify-self:center}}
+/* guide */
+.guide{min-width:0;display:grid;gap:18px;padding-top:8px}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.guide h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:1.08;letter-spacing:-.02em;margin:0;text-wrap:balance}
+.guide p{margin:0;max-width:62ch}
+.why{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:6px;max-width:62ch}
+.why b{font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.why ul{margin:0;padding-left:18px;display:grid;gap:4px}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{font:600 14px/1 var(--body);border-radius:999px;padding:11px 18px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+.btn:focus-visible,.dot:focus-visible,.ph button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.dots{display:flex;gap:6px;flex-wrap:wrap}
+.dot{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:500 12px/1 var(--mono);cursor:pointer}
+.dot[aria-current="step"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.hint{font-size:12.5px;color:var(--muted)}
+/* phone */
+.phone-col{display:grid;gap:10px;justify-items:center}
+.phone{width:340px;max-width:100%;height:700px;border:10px solid var(--hardware);border-radius:48px;background:var(--app-bg);position:relative;overflow:hidden;
+  box-shadow:0 24px 60px -24px rgba(10,30,70,.45)}
+.ph{position:absolute;inset:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;color:var(--app-ink);display:flex;flex-direction:column}
+.ph[hidden]{display:none!important}
+.status{height:44px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:13px;font-weight:600}
+.status.light{color:#fff}
+.ph button{font-family:inherit;cursor:pointer}
+.caption{font-size:12px;color:var(--muted);text-align:center;max-width:320px}
+/* app icon glyph (generic waveform, no logo) */
+.glyph{display:inline-grid;place-items:center;border-radius:50%;background:linear-gradient(160deg,var(--app-blue),var(--app-blue-2))}
+/* screen: tag result */
+.tag{background:linear-gradient(170deg,#1f7bff 0%,#0d47d9 60%,#0a2f9e 100%);color:#fff}
+.tag .body{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 22px 28px;gap:14px;text-align:center}
+.art{border-radius:12px;flex:none}
+.tag .art{width:190px;height:190px;box-shadow:0 18px 40px -16px rgba(0,0,0,.5);margin-top:18px}
+.tag h2{font-size:24px;margin:6px 0 0;font-weight:700;letter-spacing:-.01em}
+.tag .artist{font-size:16px;opacity:.85;margin-top:-8px}
+.tag .row{display:flex;gap:10px;margin-top:4px}
+.pill{border:0;border-radius:999px;padding:10px 16px;font-size:14px;font-weight:600}
+.pill.white{background:#fff;color:#0d47d9}
+.pill.glass{background:rgba(255,255,255,.18);color:#fff}
+.saved{margin-top:auto;display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:12px 14px;text-align:left;font-size:13.5px;width:100%}
+.saved svg{flex:none}
+.saved strong{display:block;font-size:14px}
+/* screen: before list */
+.appbar{padding:4px 20px 10px}
+.appbar h3{font-size:30px;font-weight:800;margin:0;letter-spacing:-.02em}
+.appbar .sub{font-size:13px;color:var(--app-muted)}
+.list{flex:1;overflow:auto;padding:0 16px 12px;display:grid;align-content:start;gap:2px}
+.item{display:flex;gap:12px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--app-line)}
+.item .art{width:46px;height:46px;border-radius:8px}
+.item .t{font-size:14.5px;font-weight:600;line-height:1.25}
+.item .a{font-size:13px;color:var(--app-muted);line-height:1.3}
+.item .meta{margin-left:auto;font-size:12px;color:var(--app-muted);white-space:nowrap}
+.item .txt{min-width:0;flex:1}
+.flag{margin:0 16px 18px;background:#fff4e5;border:1px solid #f3c98b;color:#7a4a05;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.4}
+/* screen: lock notification */
+.lock{background:radial-gradient(120% 80% at 30% 10%,#3b5bdb 0%,#1b2a6b 45%,#0b1033 100%);color:#fff}
+.lock .clock{text-align:center;margin-top:30px}
+.lock .clock .d{font-size:16px;font-weight:600;opacity:.9}
+.lock .clock .t{font-size:84px;font-weight:700;line-height:1;letter-spacing:-.03em}
+.notif{margin:auto 12px 120px;background:rgba(255,255,255,.82);color:#0b1424;border:0;border-radius:20px;padding:12px 14px;text-align:left;display:grid;grid-template-columns:38px 1fr;gap:4px 10px;
+  box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
+.notif .glyph{width:38px;height:38px;border-radius:10px;grid-row:span 3}
+.notif .h{display:flex;justify-content:space-between;font-size:12px;color:#4b5568}
+.notif .h b{color:#0b1424}
+.notif .m{font-size:14.5px;font-weight:600;line-height:1.3}
+.notif .s{font-size:13.5px;color:#2a3446;line-height:1.3}
+.lock .swipe{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-size:12px;opacity:.7}
+/* screen: inbox */
+.playall{margin:4px 16px 10px;display:flex;gap:10px;align-items:center;background:linear-gradient(160deg,var(--app-blue),var(--app-blue-2));color:#fff;border:0;border-radius:14px;padding:12px 14px;text-align:left}
+.playall .pi{width:36px;height:36px;border-radius:50%;background:#fff;display:grid;place-items:center;flex:none}
+.playall b{display:block;font-size:15px}
+.playall span{font-size:12.5px;opacity:.85}
+.new{width:8px;height:8px;border-radius:50%;background:var(--app-blue);flex:none}
+.ctx{display:inline-flex;gap:4px;align-items:center;margin-top:3px;font-size:11.5px;color:#37507a;background:#e9f0fc;border-radius:6px;padding:2px 6px}
+.state{font-size:11.5px;font-weight:600;color:var(--app-muted);margin-left:auto;white-space:nowrap}
+.state.kept{color:#12805c}
+.tabs{flex:none;display:flex;justify-content:space-around;border-top:1px solid var(--app-line);background:rgba(255,255,255,.92);padding:8px 0 22px;font-size:10.5px;color:var(--app-muted)}
+.tabs div{display:grid;justify-items:center;gap:2px}
+.tabs .on{color:var(--app-blue);font-weight:600}
+.tabs i{width:22px;height:22px;border-radius:6px;background:currentColor;opacity:.25;display:block}
+.tabs .on i{opacity:1;border-radius:50%}
+/* screen: triage */
+.tri{background:linear-gradient(180deg,#e9eef7 0%,var(--app-bg) 40%)}
+.tri .count{text-align:center;font-size:12.5px;color:var(--app-muted);font-weight:600;letter-spacing:.02em}
+.card{margin:10px 18px 0;background:var(--app-card);border-radius:20px;padding:18px;display:grid;justify-items:center;gap:6px;text-align:center;box-shadow:0 12px 30px -18px rgba(20,40,90,.45)}
+.card .art{width:200px;height:200px;border-radius:14px}
+.card h4{margin:8px 0 0;font-size:20px;letter-spacing:-.01em}
+.card .a{font-size:14.5px;color:var(--app-muted);margin-top:-4px}
+.bar{width:100%;height:4px;border-radius:2px;background:var(--app-line);overflow:hidden;margin-top:8px}
+.bar i{display:block;height:100%;width:0;background:var(--app-blue);animation:play 30s linear forwards}
+@keyframes play{to{width:100%}}
+@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:46%}}
+.times{width:100%;display:flex;justify-content:space-between;font-size:11px;color:var(--app-muted)}
+.choices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:16px 18px 0}
+.choice{border:0;border-radius:14px;padding:12px 6px;font-size:14px;font-weight:600;background:var(--app-card);color:var(--app-ink);box-shadow:0 1px 0 var(--app-line)}
+.choice.keep{background:var(--app-blue);color:#fff}
+.choice small{display:block;font-weight:400;font-size:11px;opacity:.75;margin-top:2px}
+.toast{margin:14px 18px 0;min-height:40px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#12805c;font-weight:600;text-align:center}
+/* screen: done */
+.done .body{flex:1;display:grid;align-content:center;justify-items:center;gap:12px;padding:0 24px;text-align:center}
+.done .ok{width:84px;height:84px;border-radius:50%;background:#e3f4ec;display:grid;place-items:center}
+.done h3{font-size:26px;margin:4px 0 0;letter-spacing:-.02em}
+.done .sum{font-size:15px;color:var(--app-muted)}
+.done .box{background:var(--app-card);border-radius:14px;padding:12px 14px;font-size:13.5px;text-align:left;width:100%;display:grid;gap:8px}
+.done .box .pill{justify-self:start;background:#1db954;color:#06210f;padding:8px 14px;font-size:13px}
+/* screen: settings */
+.set .grp{margin:8px 16px 0}
+.set .gl{font-size:12px;color:var(--app-muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 6px 6px}
+.set .rows{background:var(--app-card);border-radius:14px;overflow:hidden}
+.set .r{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--app-line);font-size:14.5px}
+.set .r:last-child{border-bottom:0}
+.set .r small{display:block;font-size:12px;color:var(--app-muted)}
+.set .tick{color:var(--app-blue);font-weight:700}
+.set .tagv2{font-size:10.5px;font-weight:700;color:#7a4a05;background:#fff4e5;border-radius:4px;padding:1px 5px;margin-left:6px}
+.sw{width:46px;height:28px;border-radius:999px;background:#d7dde7;position:relative;flex:none;border:0;padding:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
+.sw[aria-checked="true"]{background:#34c759}
+.sw[aria-checked="true"]::after{left:21px}
+.set .foot{font-size:12px;color:var(--app-muted);margin:8px 22px 0;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="name">Finds, a Shazam concept</div>
+    <div class="note">Concept prototype for a product teardown by Pritesh Kabra. Not affiliated with Apple or Shazam. Songs and artists are invented.</div>
+  </header>
+
+  <main class="stage">
+    <section class="guide" aria-live="polite">
+      <div class="eyebrow" id="g-eyebrow">Step 1 of 8</div>
+      <h1 id="g-title">Tag a song like you do today</h1>
+      <p id="g-body"></p>
+      <div class="why"><b>Why it matters</b><ul id="g-why"></ul></div>
+      <div class="controls">
+        <button class="btn" id="prev" type="button">Back</button>
+        <button class="btn primary" id="next" type="button">Next</button>
+        <div class="dots" id="dots" role="list"></div>
+      </div>
+      <div class="hint">Use the arrow keys, or tap inside the phone where it says so.</div>
+    </section>
+
+    <div class="phone-col">
+      <div class="phone" role="region" aria-label="Phone prototype">
+
+        <!-- 1 tag -->
+        <div class="ph tag" data-screen="tag">
+          <div class="status light"><span>8:12</span><span>5G</span></div>
+          <div class="body">
+            <div class="art" style="background:linear-gradient(135deg,#ffb26b,#ff5e7e 55%,#6a3df0)"></div>
+            <h2>Monsoon Static</h2>
+            <div class="artist">Kavya Rao</div>
+            <div class="row"><button class="pill white" type="button">Play full song</button><button class="pill glass" type="button">Lyrics</button></div>
+            <button class="saved" type="button" data-go="before">
+              <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="14" fill="#fff"/><path d="M8 14.5l4 4 8-9" fill="none" stroke="#0d47d9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              <span><strong>Saved to Finds</strong>We'll bring it back on Sunday, when you can listen.</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 2 before -->
+        <div class="ph" data-screen="before" hidden>
+          <div class="status"><span>9:41</span><span>5G</span></div>
+          <div class="appbar"><h3>My Music</h3><div class="sub">Today's experience · 142 Shazams</div></div>
+          <div class="list">
+            <div class="item"><div class="art" style="background:linear-gradient(135deg,#ffb26b,#ff5e7e 55%,#6a3df0)"></div><div class="txt"><div class="t">Monsoon Static</div><div class="a">Kavya Rao</div></div><div class="meta">Today</div></div>
+            <div class="item"><div class="art" style="background:linear-gradient(135deg,#0f9b8e,#1a3a5f)"></div><div class="txt"><div class="t">Glasshouse</div><div class="a">Ida Lind</div></div><div class="meta">Sat</div></div>
+            <div class="item"><div class="art" style="background:linear-gradient(135deg,#ffd166,#ef476f)"></div><div class="txt"><div class="t">Halfway Home (Sped Up)</div><div class="a">KIRA</div></div><div class="meta">Thu</div></div>
+            <div class="item"><div class="art" style="background:linear-gradient(135deg,#8338ec,#3a86ff)"></div><div class="txt"><div class="t">Velvet Signal</div><div class="a">Noor Ahmed</div></div><div class="meta">Wed</div></div>
+            <div class="item"><div class="art" style="background:linear-gradient(135deg,#2a9d8f,#e9c46a)"></div><div class="txt"><div class="t">Late Train to Lonavala</div><div class="a">Aarav &amp; The Ghats</div></div><div class="meta">Mon</div></div>
+            <div class="item"><div class="art" style="background:linear-gradient(135deg,#6d597a,#e56b6f)"></div><div class="txt"><div class="t">Paper Lanterns</div><div class="a">Sora Kim</div></div><div class="meta">2 Oct</div></div>
+            <div class="item"><div class="art" style="background:linear-gradient(135deg,#264653,#2a9d8f)"></div><div class="txt"><div class="t">Low Tide Radio</div><div class="a">The Lowlights</div></div><div class="meta">28 Sep</div></div>
+            <div class="item"><div class="art" style="background:linear-gradient(135deg,#f4a261,#e76f51)"></div><div class="txt"><div class="t">Chai at Midnight</div><div class="a">Meher</div></div><div class="meta">21 Sep</div></div>
+          </div>
+          <div class="flag">No context, no reminder. Did she play any of these? Nobody knows, including her.</div>
+        </div>
+
+        <!-- 3 lock -->
+        <div class="ph lock" data-screen="notify" hidden>
+          <div class="status light"><span></span><span>5G</span></div>
+          <div class="clock"><div class="d">Sunday 18 October</div><div class="t">7:00</div></div>
+          <button class="notif" type="button" data-go="inbox">
+            <span class="glyph"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><g fill="#fff"><rect x="3" y="8" width="2.6" height="6" rx="1.3"/><rect x="7.4" y="5" width="2.6" height="12" rx="1.3"/><rect x="11.8" y="3" width="2.6" height="16" rx="1.3"/><rect x="16.2" y="7" width="2.6" height="8" rx="1.3"/></g></svg></span>
+            <span class="h"><b>FINDS</b><span>now</span></span>
+            <span class="m">5 songs you found this week</span>
+            <span class="s">Tap to play your Finds mix · 2 min of previews</span>
+          </button>
+          <div class="swipe">Tap the notification</div>
+        </div>
+
+        <!-- 4 inbox -->
+        <div class="ph" data-screen="inbox" hidden>
+          <div class="status"><span>7:00</span><span>5G</span></div>
+          <div class="appbar"><h3>Finds</h3><div class="sub" id="inbox-sub">5 new this week</div></div>
+          <button class="playall" type="button" data-go="triage">
+            <span class="pi"><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M2 1.5v13l11-6.5z" fill="#0d47d9"/></svg></span>
+            <span><b>Play Finds mix</b><span>Preview each song, then keep it or let it go</span></span>
+          </button>
+          <div class="list" id="inbox-list"></div>
+          <div class="tabs"><div><i></i>Home</div><div class="on"><i></i>Finds</div><div><i></i>Concerts</div></div>
+        </div>
+
+        <!-- 5 triage -->
+        <div class="ph tri" data-screen="triage" hidden>
+          <div class="status"><span>7:01</span><span>5G</span></div>
+          <div class="count" id="tri-count">1 of 5</div>
+          <div class="card">
+            <div class="art" id="tri-art"></div>
+            <h4 id="tri-title"></h4>
+            <div class="a" id="tri-artist"></div>
+            <div class="ctx" id="tri-ctx"></div>
+            <div class="bar"><i id="tri-bar"></i></div>
+            <div class="times"><span>Preview</span><span>0:30</span></div>
+          </div>
+          <div class="choices">
+            <button class="choice" type="button" data-choice="nope">Not for me<small>clear it</small></button>
+            <button class="choice" type="button" data-choice="later">Later<small>next week</small></button>
+            <button class="choice keep" type="button" data-choice="keep">Keep<small>to Spotify</small></button>
+          </div>
+          <div class="toast" id="toast" role="status"></div>
+        </div>
+
+        <!-- 6 done -->
+        <div class="ph done" data-screen="done" hidden>
+          <div class="status"><span>7:03</span><span>5G</span></div>
+          <div class="body">
+            <div class="ok"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M10 21l7 7 14-15" fill="none" stroke="#12805c" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+            <h3>All caught up</h3>
+            <div class="sum" id="done-sum">3 kept · 1 later · 1 cleared</div>
+            <div class="box">
+              <span id="done-box">Kept songs are in your <b>My Finds</b> playlist in Spotify.</span>
+              <button class="pill" type="button">Open in Spotify</button>
+            </div>
+            <div class="sum" style="font-size:13px" id="done-later">1 song comes back next Sunday.</div>
+          </div>
+          <div class="tabs"><div><i></i>Home</div><div class="on"><i></i>Finds</div><div><i></i>Concerts</div></div>
+        </div>
+
+        <!-- 7 settings -->
+        <div class="ph set" data-screen="settings" hidden>
+          <div class="status"><span>7:04</span><span>5G</span></div>
+          <div class="appbar"><h3 style="font-size:24px">Finds settings</h3></div>
+          <div class="grp">
+            <div class="gl">Bring back my finds</div>
+            <div class="rows" role="radiogroup" aria-label="Bring back my finds">
+              <div class="r"><span>Weekly mix<small>Sundays at 7 pm · 1 notification</small></span><span class="tick">✓</span></div>
+              <div class="r"><span>At listening moments<span class="tagv2">v2</span><small>When headphones or the car connect</small></span><span></span></div>
+              <div class="r"><span>Off<small>Finds still collects your songs</small></span><span></span></div>
+            </div>
+            <div class="gl">Context</div>
+            <div class="rows">
+              <div class="r"><span>Where I heard it<small>Source app and time are always kept</small></span><span class="tick">✓</span></div>
+              <div class="r"><span>Save the place<small>Off by default · stays on this iPhone</small></span><button class="sw" type="button" role="switch" aria-checked="true" aria-label="Save the place" id="placeSwitch"></button></div>
+            </div>
+            <div class="gl">Keep songs to</div>
+            <div class="rows">
+              <div class="r"><span>Spotify</span><span class="tick">✓</span></div>
+              <div class="r"><span>Apple Music</span><span></span></div>
+            </div>
+          </div>
+          <div class="foot">Finds stops on its own after 3 mixes you don't open.</div>
+        </div>
+
+      </div>
+      <div class="caption" id="caption">Riya, in a café in Pune, taps Music Recognition in Control Center.</div>
+    </div>
+  </main>
+</div>
+
+<script>
+(function(){
+  var songs = [
+    {t:"Monsoon Static", a:"Kavya Rao", c:"Café · Koregaon Park · Tue 8:12 pm", art:"linear-gradient(135deg,#ffb26b,#ff5e7e 55%,#6a3df0)"},
+    {t:"Halfway Home (Sped Up)", a:"KIRA", c:"Instagram reel · Thu", art:"linear-gradient(135deg,#ffd166,#ef476f)"},
+    {t:"Velvet Signal", a:"Noor Ahmed", c:"Apple Watch · Wed, at a wedding", art:"linear-gradient(135deg,#8338ec,#3a86ff)"},
+    {t:"Glasshouse", a:"Ida Lind", c:"ChatGPT · Sat", art:"linear-gradient(135deg,#0f9b8e,#1a3a5f)"},
+    {t:"Late Train to Lonavala", a:"Aarav & The Ghats", c:"Control Center · Mon, in a cab", art:"linear-gradient(135deg,#2a9d8f,#e9c46a)"}
+  ];
+  var decisions = [];   // "keep" | "later" | "nope" per song index
+  var current = 0;
+
+  var steps = [
+    {screen:"tag", title:"Tag a song like you do today",
+     body:"Riya hears a song in a café and taps Music Recognition in Control Center. Shazam names it in seconds, as it does today. One new line tells her the song is safe and will come back when she can listen.",
+     why:["User: no extra taps at the moment of hearing.","Business: the core flow is untouched, so recognition speed can't get worse."],
+     cap:"Riya, in a café in Pune, taps Music Recognition in Control Center."},
+    {screen:"before", title:"What happens today: the pile",
+     body:"Her songs sync to a list and to a “My Shazam Tracks” playlist that only grows. Nothing shows where she heard each song or whether she ever played it. Nothing brings them back.",
+     why:["This is the leak: every unplayed find is lost value for her, for Apple Music and for the artist.","Storage is already solved. Coming back is not."],
+     cap:"Today's library: a log of names and dates."},
+    {screen:"notify", title:"Sunday, 7 pm: one notification",
+     body:"Once a week Shazam turns the week's unheard finds into a short mix. One notification, at a time people tend to be home and have headphones on. In v2 the nudge can also come when headphones or the car connect.",
+     why:["User: songs come back when she can actually listen.","Business: a weekly reason to listen, owned by Shazam rather than by the OS or a chatbot."],
+     cap:"Tap the notification to open Finds."},
+    {screen:"inbox", title:"Finds: an inbox, not an archive",
+     body:"Every tag from every surface lands here marked New: the app, Control Center, the Watch, ChatGPT. Each one carries a little context: where it came from and when. The place shows only because Riya turned it on.",
+     why:["Context answers “why did I save this?”, the question that stops people pressing play.","One inbox for all surfaces means tags made outside the app still pay off."],
+     cap:"Tap Play Finds mix."},
+    {screen:"triage", title:"Listen and decide in one tap",
+     body:"The mix plays a 30-second preview of each find. Keep sends it to her playlist in the app she chose, Spotify here. Later brings it back next week. Not for me clears it for good.",
+     why:["Keep is where value is created: a song saved in her streaming app, and a signal for the artist.","Try the three buttons. The inbox updates as you go."],
+     cap:"Preview, then Keep, Later or Not for me."},
+    {screen:"done", title:"An empty inbox is the goal",
+     body:"Once every find is decided, Finds says so and stops. No feed to scroll, no autoplay radio. Kept songs live in her own playlist, in her own app.",
+     why:["Success is finds turned into listens, not time spent in Shazam.","A clear finish makes next Sunday's mix feel light, not like homework."],
+     cap:"Caught up until next week."},
+    {screen:"settings", title:"She stays in control",
+     body:"One reminder a week by default. She can switch to listening moments or turn reminders off. Place is off unless she turns it on, and stays on her phone. Spotify and Apple Music get equal treatment.",
+     why:["Guardrails against notification fatigue and privacy worries.","Equal treatment keeps Shazam neutral, the same concern regulators looked at in 2018."],
+     cap:"Settings: reminders, context and playlist app."},
+    {screen:"done", title:"How we'd know it worked",
+     body:"Test on iOS in two markets for 8 weeks, A/B against today's experience. Ship more widely only if the North Star moves and the guardrails hold.",
+     why:["North Star: find-to-listen rate, the share of new tags played or kept within 7 days.","Inputs: share of tags landing in Finds, mix open rate, triage rate, keep rate.","Guardrails: notification opt-outs, time to result, and an unchanged Apple Music vs Spotify split."],
+     cap:"The outcome we measure: finds that became listens."}
+  ];
+  var step = 0;
+
+  var $ = function(id){return document.getElementById(id);};
+  var screens = document.querySelectorAll(".ph");
+
+  function renderInbox(){
+    var list = $("inbox-list"); list.innerHTML = "";
+    var left = 0;
+    songs.forEach(function(s,i){
+      var d = decisions[i];
+      if(!d) left++;
+      var row = document.createElement("div"); row.className = "item";
+      var dot = d ? "" : '<span class="new" aria-label="New"></span>';
+      var st = d === "keep" ? '<span class="state kept">Kept</span>' : d === "later" ? '<span class="state">Next week</span>' : d === "nope" ? '<span class="state">Cleared</span>' : "";
+      row.innerHTML = dot + '<div class="art" style="background:'+s.art+'"></div><div class="txt"><div class="t"></div><div class="a"></div><div class="ctx"></div></div>' + st;
+      row.querySelector(".t").textContent = s.t;
+      row.querySelector(".a").textContent = s.a;
+      row.querySelector(".ctx").textContent = s.c;
+      if(d === "nope") row.style.opacity = ".45";
+      list.appendChild(row);
+    });
+    $("inbox-sub").textContent = left ? left + " new this week" : "All caught up";
+  }
+
+  function renderTriage(){
+    var s = songs[current];
+    $("tri-count").textContent = (current+1) + " of " + songs.length;
+    $("tri-art").style.background = s.art;
+    $("tri-title").textContent = s.t;
+    $("tri-artist").textContent = s.a;
+    $("tri-ctx").textContent = s.c;
+    var bar = $("tri-bar"); bar.style.animation = "none"; void bar.offsetWidth; bar.style.animation = "";
+  }
+
+  function renderDone(){
+    var k=0,l=0,n=0;
+    decisions.forEach(function(d){ if(d==="keep")k++; else if(d==="later")l++; else if(d==="nope")n++; });
+    if(!decisions.filter(Boolean).length){ k=3; l=1; n=1; }
+    $("done-sum").textContent = k + " kept · " + l + " later · " + n + " cleared";
+    $("done-later").textContent = l ? (l === 1 ? "1 song comes back next Sunday." : l + " songs come back next Sunday.") : "Nothing waiting. See you next Sunday.";
+  }
+
+  function show(screen){
+    screens.forEach(function(el){ el.hidden = el.getAttribute("data-screen") !== screen; });
+    if(screen === "inbox") renderInbox();
+    if(screen === "triage") renderTriage();
+    if(screen === "done") renderDone();
+  }
+
+  function go(i){
+    step = Math.max(0, Math.min(steps.length-1, i));
+    var s = steps[step];
+    $("g-eyebrow").textContent = "Step " + (step+1) + " of " + steps.length;
+    $("g-title").textContent = s.title;
+    $("g-body").textContent = s.body;
+    var ul = $("g-why"); ul.innerHTML = "";
+    s.why.forEach(function(w){ var li=document.createElement("li"); li.textContent=w; ul.appendChild(li); });
+    $("caption").textContent = s.cap;
+    $("prev").disabled = step === 0;
+    $("next").textContent = step === steps.length-1 ? "Start over" : "Next";
+    document.querySelectorAll(".dot").forEach(function(d,j){ if(j===step) d.setAttribute("aria-current","step"); else d.removeAttribute("aria-current"); });
+    if(s.screen === "triage" && current >= songs.length){ current = 0; decisions = []; }
+    show(s.screen);
+  }
+
+  function goScreen(name){
+    for(var j=0;j<steps.length;j++){ if(steps[j].screen===name){ go(j); return; } }
+  }
+
+  // dots
+  var dots = $("dots");
+  steps.forEach(function(_,i){
+    var b=document.createElement("button"); b.type="button"; b.className="dot"; b.textContent=i+1;
+    b.setAttribute("aria-label","Go to step "+(i+1)); b.setAttribute("role","listitem");
+    b.addEventListener("click",function(){ go(i); }); dots.appendChild(b);
+  });
+
+  $("prev").addEventListener("click",function(){ go(step-1); });
+  $("next").addEventListener("click",function(){
+    if(step === steps.length-1){ decisions=[]; current=0; go(0); } else go(step+1);
+  });
+  document.addEventListener("keydown",function(e){
+    if(e.key==="ArrowRight") go(step+1);
+    if(e.key==="ArrowLeft") go(step-1);
+  });
+  document.querySelectorAll("[data-go]").forEach(function(el){
+    el.addEventListener("click",function(){ goScreen(el.getAttribute("data-go")); });
+  });
+
+  var toastTimer;
+  document.querySelectorAll("[data-choice]").forEach(function(b){
+    b.addEventListener("click",function(){
+      var c = b.getAttribute("data-choice");
+      decisions[current] = c;
+      var s = songs[current];
+      var msg = c==="keep" ? "Added “"+s.t+"” to My Finds in Spotify" : c==="later" ? "“"+s.t+"” comes back next Sunday" : "Cleared. We won't bring it back.";
+      $("toast").textContent = msg;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function(){ $("toast").textContent=""; }, 2200);
+      current++;
+      if(current >= songs.length){ setTimeout(function(){ goScreen("done"); }, 700); }
+      else renderTriage();
+    });
+  });
+
+  var sw = $("placeSwitch");
+  sw.addEventListener("click",function(){ sw.setAttribute("aria-checked", sw.getAttribute("aria-checked")==="true" ? "false" : "true"); });
+
+  go(0);
+})();
+</script>
+</body>
+</html>
