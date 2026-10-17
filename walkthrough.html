@@ -265,7 +265,7 @@ function mount(host) {
   let S, timers = [], scale = 1;
   const subs = [];
   const fresh = () => ({
-    stack: [{s: 'home'}], phase: 0, pending: null, found: false, day: 'sat', keepOn: true, notify: true, days: 30, sound: 'music', playing: false, confirmed: false, rejected: false,
+    stack: [{s: 'home'}], phase: 0, pending: null, found: false, day: 'sat', keepOn: true, notify: true, days: 30, sound: 'music', playing: false, confirmed: false, rejected: false, overrode: false,
     lib: [{id: 'ml', when: 'Thu, 16 Oct at 9:05 PM', ago: '2 days ago'}, {id: 'nb', when: 'Mon, 13 Oct at 7:40 PM', ago: 'Last week'}],
     q: '', overlay: null, toast: null, hint: null, lyrNone: false, opened: false, reported: false
   });
@@ -354,20 +354,21 @@ function mount(host) {
     return `<div class="scr" style="background:#11161c"><button class="x" data-a="close" aria-label="Close">${X}</button>
       <div class="miss">
         <div class="t1" style="font-size:31px;font-weight:800;margin-top:10px">Not found yet</div>
-        <div class="t2">We heard music, but couldn’t name it yet</div>
+        <div class="t2">${top().override ? 'Thanks for telling us it was a song' : 'We heard music, but couldn’t name it yet'}</div>
         <div class="keep"><div class="rad">${REDO}</div><div><h5>${top().merged ? 'Added to the same search' : 'We’ll keep looking'}</h5><p>${top().merged ? `Your ${S.pending ? S.pending.tries : 2} tries are combined into one search. More sound means a better chance.` : `Over the next ${S.days} days we’ll try other speeds, every country’s catalogue and new releases. ${S.notify ? 'If we find a likely match, we’ll ask you to confirm it.' : 'Check Library to see if we found it.'}`}</p></div></div>
         <button class="pl line${H('lyrics-btn')}" data-a="lyrics">Remember any words? Search lyrics</button>
         <button class="pl blue" data-a="retry">Try Again</button>
-        <div class="fine" style="margin-top:auto">We heard 14 seconds of music at 11:42 PM.<br>We saved a sound thumbprint (codes), not a recording.</div></div></div>`;
+        <div class="fine" style="margin-top:auto">${top().override ? 'Heard at 11:42 PM' : 'We heard 14 seconds of music at 11:42 PM'}.<br>We saved a sound thumbprint (codes), not a recording.</div></div></div>`;
   }
   function noMusicScr() {
     return `<div class="scr" style="background:#1f2225"><button class="x" data-a="close" aria-label="Close">${X}</button>
       <div class="center" style="justify-content:flex-start;padding-top:200px;gap:18px">
         <div style="width:90px;height:90px;border-radius:50%;background:#2c3138;display:grid;place-items:center"><svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="#fff" stroke-width="2"/><path d="M3 3l18 18" stroke="#ff8a8a" stroke-width="2.2" stroke-linecap="round"/></svg></div>
         <div class="t1" style="font-size:30px;font-weight:800">We didn’t hear music</div>
-        <div class="t2" style="margin-top:-8px">It sounded like people talking. Nothing was saved.</div>
+        <div class="t2" style="margin-top:-8px">It sounded like people talking, so nothing was saved.</div>
         <button class="pl blue" style="margin-top:20px" data-a="retry">Try Again</button>
-        <div class="fine" style="margin-top:6px">Hold your phone closer to the speaker when the song plays.</div></div></div>`;
+        ${S.keepOn ? `<button class="pl line${H('override')}" data-a="override">It was a song. Keep looking</button>` : ''}
+        <div class="fine" style="margin-top:6px">Some songs start with talking. If this was one, tell us and we’ll search for it.</div></div></div>`;
   }
   function confirmScr() {
     const s = SONGS.cd;
@@ -531,6 +532,7 @@ function mount(host) {
       case 'notif': case 'check': clear(); S.playing = false; S.stack = [{s: 'home'}, {s: 'confirm'}]; render(); break;
       case 'play': S.playing = !S.playing; render(); break;
       case 'yes': yes(); break;
+      case 'override': S.overrode = true; if (!S.pending) S.pending = {when: HEARD, tries: 1, state: 'search'}; else S.pending.tries++; replace('miss', {override: true}); break;
       case 'no': S.rejected = true; if (S.pending) S.pending.state = 'search'; clear(); S.playing = false; S.stack = [{s: 'home'}]; toast('Thanks. We’ll keep looking and won’t suggest this song again.'); break;
       case 'unlock': clear(); S.stack = [{s: 'home'}]; render(); break;
       case 'nope': S.overlay = null; nope(); break;
@@ -596,10 +598,10 @@ const STEPS = [
   today: 'Search Songs exists, but nothing leads you to it after a miss.',
   now: 'The miss screen offers a lyrics search. If nothing matches, the deeper search carries on.',
   doit: 'Type “dhol vajto”, then tap “None of these. Keep looking”.', done: s => s.lyrNone},
- {t: 'Noise isn’t saved', setup: () => { api.reset(); api.set({sound: 'talk'}); }, hint: 'shazam',
+ {t: 'Noise isn’t saved, but you have the last word', setup: () => { api.reset(); api.set({sound: 'talk'}); }, hint: ['shazam', 'override'],
   today: 'Every failure shows the same “No Result”, whether Shazam heard a song or people talking.',
-  now: 'Shazam checks for music first. No music: it says so, and nothing is saved, so no junk and no false alarms later.',
-  doit: 'People are talking here. Tap Shazam.', done: s => api.top().s === 'nomusic'},
+  now: 'Shazam checks the whole clip for music. Clearly no music: it says so and saves nothing. Some songs open with dialogue, so you can overrule it.',
+  doit: 'People are talking here. Tap Shazam, then tap “It was a song. Keep looking”.', done: s => s.overrode},
  {t: 'Still looking, in plain sight', setup: () => { api.reset(); api.set({pending: {when: SZ.HEARD, tries: 1, state: 'search'}}); }, hint: 'tab-lib',
   today: 'A miss leaves no trace anywhere in the app.',
   now: 'A “Still looking” card shows what Shazam is trying and how many days are left. You can stop it anytime.',
