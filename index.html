@@ -2,470 +2,552 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="Guided prototype of Finds, a Shazam concept that turns tagged songs into songs you actually listen to.">
-<title>Shazam Finds Prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>We'll Keep Looking</title>
+<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap">
 <style>
-/* Layout: guided walkthrough on the left, a live phone on the right; stacks phone-first on narrow screens */
+/* Layout: the working phone carries the page; small controls above it, a link to the guided walkthrough below. */
 :root{
-  --bg:#eef3fa; --surface:#ffffff; --ink:#0f1a2b; --muted:#56637a; --line:#d6dfec;
-  --accent:#0a66f0; --accent-soft:#e2ecfd; --good:#12805c;
-  --display:"Schibsted Grotesk", "Helvetica Neue", Arial, sans-serif;
-  --body:"IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
-  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
-  /* phone UI: a fixed light iOS-style look in both page themes */
-  --app-bg:#f4f6fa; --app-card:#ffffff; --app-ink:#0b1424; --app-muted:#6a7487; --app-line:#e3e8f0;
-  --app-blue:#0a6cff; --app-blue-2:#1546d6; --hardware:#0b0d12;
+  --bg:#edf1f7; --surface:#ffffff; --fg:#0e1a2b; --muted:#56637a; --line:#d6dde8;
+  --accent:#2f6bf2; --accent-soft:#e3ebfd; --today:#b4480b; --today-soft:#fdeee5;
+  --display:"Bricolage Grotesque","Avenir Next",system-ui,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --bg:#0a111d; --surface:#121b2b; --ink:#e7edf7; --muted:#9aa8bf; --line:#24314a;
-    --accent:#5b9bff; --accent-soft:#16284a; --good:#4cc79a; color-scheme:dark;
-  }
-}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0b111b; --surface:#131b28; --fg:#e8eef8; --muted:#9aa8bf; --line:#253247;
+  --accent:#6b98ff; --accent-soft:#1a2a4d; --today:#fb923c; --today-soft:#3a2214; color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0a111d; --surface:#121b2b; --ink:#e7edf7; --muted:#9aa8bf; --line:#24314a;
-  --accent:#5b9bff; --accent-soft:#16284a; --good:#4cc79a; color-scheme:dark;
-}
+  --bg:#0b111b; --surface:#131b28; --fg:#e8eef8; --muted:#9aa8bf; --line:#253247;
+  --accent:#6b98ff; --accent-soft:#1a2a4d; --today:#fb923c; --today-soft:#3a2214; color-scheme:dark}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55;
-  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 40px}
-.wrap{max-width:1080px;margin:0 auto;display:grid;gap:20px}
-.top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:12px}
-.top .name{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:-.01em}
-.top .note{font-size:12.5px;color:var(--muted)}
-.top a{color:var(--accent)}
-.stage{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:40px;align-items:start}
-@media (max-width:860px){.stage{grid-template-columns:minmax(0,1fr)}.phone-col{order:-1;justify-self:center}}
-/* guide */
-.guide{min-width:0;display:grid;gap:18px;padding-top:8px}
-.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
-.guide h1{font-family:var(--display);font-weight:800;font-size:clamp(28px,3.4vw,40px);line-height:1.08;letter-spacing:-.02em;margin:0;text-wrap:balance}
-.guide p{margin:0;max-width:62ch}
-.why{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:6px;max-width:62ch}
-.why b{font-family:var(--mono);font-weight:500;font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.why ul{margin:0;padding-left:18px;display:grid;gap:4px}
-.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.btn{font:600 14px/1 var(--body);border-radius:999px;padding:11px 18px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
-.btn:disabled{opacity:.4;cursor:default}
-.btn:focus-visible,.dot:focus-visible,.ph button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-.dots{display:flex;gap:6px;flex-wrap:wrap}
-.dot{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:500 12px/1 var(--mono);cursor:pointer}
-.dot[aria-current="step"]{background:var(--accent);border-color:var(--accent);color:#fff}
-.hint{font-size:12.5px;color:var(--muted)}
-/* phone */
-.phone-col{display:grid;gap:10px;justify-items:center}
-.phone{width:340px;max-width:100%;height:700px;border:10px solid var(--hardware);border-radius:48px;background:var(--app-bg);position:relative;overflow:hidden;
-  box-shadow:0 24px 60px -24px rgba(10,30,70,.45)}
-.ph{position:absolute;inset:0;font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;color:var(--app-ink);display:flex;flex-direction:column}
-.ph[hidden]{display:none!important}
-.status{height:44px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font-size:13px;font-weight:600}
-.status.light{color:#fff}
-.ph button{font-family:inherit;cursor:pointer}
-.caption{font-size:12px;color:var(--muted);text-align:center;max-width:320px}
-/* app icon glyph (generic waveform, no logo) */
-.glyph{display:inline-grid;place-items:center;border-radius:50%;background:linear-gradient(160deg,var(--app-blue),var(--app-blue-2))}
-/* screen: tag result */
-.tag{background:linear-gradient(170deg,#1f7bff 0%,#0d47d9 60%,#0a2f9e 100%);color:#fff}
-.tag .body{flex:1;display:flex;flex-direction:column;align-items:center;padding:20px 22px 28px;gap:14px;text-align:center}
-.art{border-radius:12px;flex:none}
-.tag .art{width:190px;height:190px;box-shadow:0 18px 40px -16px rgba(0,0,0,.5);margin-top:18px}
-.tag h2{font-size:24px;margin:6px 0 0;font-weight:700;letter-spacing:-.01em}
-.tag .artist{font-size:16px;opacity:.85;margin-top:-8px}
-.tag .row{display:flex;gap:10px;margin-top:4px}
-.pill{border:0;border-radius:999px;padding:10px 16px;font-size:14px;font-weight:600}
-.pill.white{background:#fff;color:#0d47d9}
-.pill.glass{background:rgba(255,255,255,.18);color:#fff}
-.saved{margin-top:auto;display:flex;gap:10px;align-items:center;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);border-radius:14px;padding:12px 14px;text-align:left;font-size:13.5px;width:100%}
-.saved svg{flex:none}
-.saved strong{display:block;font-size:14px}
-/* screen: before list */
-.appbar{padding:4px 20px 10px}
-.appbar h3{font-size:30px;font-weight:800;margin:0;letter-spacing:-.02em}
-.appbar .sub{font-size:13px;color:var(--app-muted)}
-.list{flex:1;overflow:auto;padding:0 16px 12px;display:grid;align-content:start;gap:2px}
-.item{display:flex;gap:12px;align-items:center;padding:9px 4px;border-bottom:1px solid var(--app-line)}
-.item .art{width:46px;height:46px;border-radius:8px}
-.item .t{font-size:14.5px;font-weight:600;line-height:1.25}
-.item .a{font-size:13px;color:var(--app-muted);line-height:1.3}
-.item .meta{margin-left:auto;font-size:12px;color:var(--app-muted);white-space:nowrap}
-.item .txt{min-width:0;flex:1}
-.flag{margin:0 16px 18px;background:#fff4e5;border:1px solid #f3c98b;color:#7a4a05;border-radius:12px;padding:10px 12px;font-size:12.5px;line-height:1.4}
-/* screen: lock notification */
-.lock{background:radial-gradient(120% 80% at 30% 10%,#3b5bdb 0%,#1b2a6b 45%,#0b1033 100%);color:#fff}
-.lock .clock{text-align:center;margin-top:30px}
-.lock .clock .d{font-size:16px;font-weight:600;opacity:.9}
-.lock .clock .t{font-size:84px;font-weight:700;line-height:1;letter-spacing:-.03em}
-.notif{margin:auto 12px 120px;background:rgba(255,255,255,.82);color:#0b1424;border:0;border-radius:20px;padding:12px 14px;text-align:left;display:grid;grid-template-columns:38px 1fr;gap:4px 10px;
-  box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
-.notif .glyph{width:38px;height:38px;border-radius:10px;grid-row:span 3}
-.notif .h{display:flex;justify-content:space-between;font-size:12px;color:#4b5568}
-.notif .h b{color:#0b1424}
-.notif .m{font-size:14.5px;font-weight:600;line-height:1.3}
-.notif .s{font-size:13.5px;color:#2a3446;line-height:1.3}
-.lock .swipe{position:absolute;bottom:28px;left:0;right:0;text-align:center;font-size:12px;opacity:.7}
-/* screen: inbox */
-.playall{margin:4px 16px 10px;display:flex;gap:10px;align-items:center;background:linear-gradient(160deg,var(--app-blue),var(--app-blue-2));color:#fff;border:0;border-radius:14px;padding:12px 14px;text-align:left}
-.playall .pi{width:36px;height:36px;border-radius:50%;background:#fff;display:grid;place-items:center;flex:none}
-.playall b{display:block;font-size:15px}
-.playall span{font-size:12.5px;opacity:.85}
-.new{width:8px;height:8px;border-radius:50%;background:var(--app-blue);flex:none}
-.ctx{display:inline-flex;gap:4px;align-items:center;margin-top:3px;font-size:11.5px;color:#37507a;background:#e9f0fc;border-radius:6px;padding:2px 6px}
-.state{font-size:11.5px;font-weight:600;color:var(--app-muted);margin-left:auto;white-space:nowrap}
-.state.kept{color:#12805c}
-.tabs{flex:none;display:flex;justify-content:space-around;border-top:1px solid var(--app-line);background:rgba(255,255,255,.92);padding:8px 0 22px;font-size:10.5px;color:var(--app-muted)}
-.tabs div{display:grid;justify-items:center;gap:2px}
-.tabs .on{color:var(--app-blue);font-weight:600}
-.tabs i{width:22px;height:22px;border-radius:6px;background:currentColor;opacity:.25;display:block}
-.tabs .on i{opacity:1;border-radius:50%}
-/* screen: triage */
-.tri{background:linear-gradient(180deg,#e9eef7 0%,var(--app-bg) 40%)}
-.tri .count{text-align:center;font-size:12.5px;color:var(--app-muted);font-weight:600;letter-spacing:.02em}
-.card{margin:10px 18px 0;background:var(--app-card);border-radius:20px;padding:18px;display:grid;justify-items:center;gap:6px;text-align:center;box-shadow:0 12px 30px -18px rgba(20,40,90,.45)}
-.card .art{width:200px;height:200px;border-radius:14px}
-.card h4{margin:8px 0 0;font-size:20px;letter-spacing:-.01em}
-.card .a{font-size:14.5px;color:var(--app-muted);margin-top:-4px}
-.bar{width:100%;height:4px;border-radius:2px;background:var(--app-line);overflow:hidden;margin-top:8px}
-.bar i{display:block;height:100%;width:0;background:var(--app-blue);animation:play 30s linear forwards}
-@keyframes play{to{width:100%}}
-@media (prefers-reduced-motion:reduce){.bar i{animation:none;width:46%}}
-.times{width:100%;display:flex;justify-content:space-between;font-size:11px;color:var(--app-muted)}
-.choices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:16px 18px 0}
-.choice{border:0;border-radius:14px;padding:12px 6px;font-size:14px;font-weight:600;background:var(--app-card);color:var(--app-ink);box-shadow:0 1px 0 var(--app-line)}
-.choice.keep{background:var(--app-blue);color:#fff}
-.choice small{display:block;font-weight:400;font-size:11px;opacity:.75;margin-top:2px}
-.toast{margin:14px 18px 0;min-height:40px;display:flex;align-items:center;justify-content:center;font-size:13px;color:#12805c;font-weight:600;text-align:center}
-/* screen: done */
-.done .body{flex:1;display:grid;align-content:center;justify-items:center;gap:12px;padding:0 24px;text-align:center}
-.done .ok{width:84px;height:84px;border-radius:50%;background:#e3f4ec;display:grid;place-items:center}
-.done h3{font-size:26px;margin:4px 0 0;letter-spacing:-.02em}
-.done .sum{font-size:15px;color:var(--app-muted)}
-.done .box{background:var(--app-card);border-radius:14px;padding:12px 14px;font-size:13.5px;text-align:left;width:100%;display:grid;gap:8px}
-.done .box .pill{justify-self:start;background:#1db954;color:#06210f;padding:8px 14px;font-size:13px}
-/* screen: settings */
-.set .grp{margin:8px 16px 0}
-.set .gl{font-size:12px;color:var(--app-muted);text-transform:uppercase;letter-spacing:.04em;margin:14px 6px 6px}
-.set .rows{background:var(--app-card);border-radius:14px;overflow:hidden}
-.set .r{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--app-line);font-size:14.5px}
-.set .r:last-child{border-bottom:0}
-.set .r small{display:block;font-size:12px;color:var(--app-muted)}
-.set .tick{color:var(--app-blue);font-weight:700}
-.set .tagv2{font-size:10.5px;font-weight:700;color:#7a4a05;background:#fff4e5;border-radius:4px;padding:1px 5px;margin-left:6px}
-.sw{width:46px;height:28px;border-radius:999px;background:#d7dde7;position:relative;flex:none;border:0;padding:0}
-.sw::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:left .2s}
-.sw[aria-checked="true"]{background:#34c759}
-.sw[aria-checked="true"]::after{left:21px}
-.set .foot{font-size:12px;color:var(--app-muted);margin:8px 22px 0;line-height:1.4}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.solo{max-width:440px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:12px}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;max-width:413px}
+.brand{font-family:var(--display);font-weight:700;font-size:22px;line-height:1.1;letter-spacing:-.01em}
+.brand em{font-style:normal;font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);padding:3px 8px;border-radius:999px;margin-left:6px;vertical-align:3px}
+.ctrl{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;width:100%;max-width:413px}
+.btn{font:500 13.5px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:8px 13px;border-radius:8px;cursor:pointer}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.tiny{font-size:12.5px;color:var(--muted);text-align:center;max-width:380px;margin:0}
+.case{display:inline-flex;align-items:center;gap:8px;font:600 15px var(--body);color:var(--accent);text-decoration:none;border:1.5px solid var(--accent);border-radius:999px;padding:10px 18px}
+.case:hover{background:var(--accent-soft)}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 14px var(--body);padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);color:var(--fg);text-decoration:none}
+.about{position:relative}
+.about-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--muted);font:italic 700 15px/1 Georgia,serif;cursor:pointer;display:grid;place-items:center}
+.about-pop{position:absolute;top:40px;right:0;width:min(290px,calc(100vw - 32px));background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:13px;color:var(--muted);box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:40;line-height:1.45}
+.about-pop b{color:var(--fg)}
+.btn:focus-visible,.pill:focus-visible,.case:focus-visible,.about-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Walkthrough */
+.guide{max-width:900px;margin:0 auto;display:grid;gap:16px}
+.guide .top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.gstage{display:grid;grid-template-columns:auto minmax(0,1fr);gap:36px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 22px;position:sticky;top:16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.kicker{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.card h2{font-family:var(--display);font-size:25px;line-height:1.15;margin:2px 0 8px;text-wrap:balance;font-weight:700}
+.rows{display:grid;gap:10px;margin:4px 0 6px}
+.rows div{display:grid;grid-template-columns:62px minmax(0,1fr);gap:12px;align-items:baseline}
+.rows b{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--today)}
+.rows .n b{color:var(--accent)}
+.try{border-left:3px solid var(--accent);padding:2px 0 2px 12px;margin:8px 0}
+.done{color:var(--accent);font-weight:600}
+.card .ctrl{justify-content:flex-start;max-width:none}
+.steps{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:2px;border-top:1px solid var(--line);padding-top:10px}
+.steps button{width:100%;text-align:left;background:none;border:0;color:var(--muted);font:14px var(--body);padding:6px 8px;border-radius:6px;cursor:pointer;display:flex;gap:10px}
+.steps .num{font-variant-numeric:tabular-nums;width:18px;flex:none}
+.steps button[aria-current="true"]{background:var(--accent-soft);color:var(--fg);font-weight:600}
+.steps button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+@media (max-width:860px){.gstage{grid-template-columns:minmax(0,1fr);justify-items:center;gap:14px}.card{position:static;width:100%;max-width:440px;order:-1}.card h2{font-size:21px}.steps{display:none}}
+
+/* Phone: Shazam iOS look (dark), drawn at iPhone 16 size 393 x 852 and scaled to fit. */
+.pbox{position:relative;flex:none}
+.ph{width:393px;height:852px;border-radius:56px;background:#000;position:absolute;top:0;left:0;transform-origin:top left;
+  box-shadow:0 0 0 10px #1c1f25,0 0 0 11px #3a3f48,0 30px 60px rgba(10,20,40,.28);overflow:hidden;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;color:#fff;-webkit-font-smoothing:antialiased;
+  font-size:15px;line-height:1.35;user-select:none;-webkit-tap-highlight-color:transparent}
+.ph *{box-sizing:border-box}
+.ph button{font-family:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-align:inherit}
+.ph button:focus-visible,.ph input:focus-visible{outline:2px solid #4f86ff;outline-offset:2px}
+.ph .island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:124px;height:36px;border-radius:20px;background:#000;z-index:30}
+.ph .sb{position:absolute;top:0;left:0;right:0;height:54px;display:flex;align-items:center;justify-content:space-between;padding:6px 34px 0 46px;font-weight:600;font-size:16px;z-index:29;pointer-events:none}
+.ph .sb .ic{display:flex;gap:6px;align-items:center}
+.ph .scr{position:absolute;inset:0;display:flex;flex-direction:column;background:#030a12;overflow:hidden}
+.ph .x{position:absolute;top:62px;left:22px;width:46px;height:46px;border-radius:50%;background:#12161c;border:1px solid #2a2f37;display:grid;place-items:center;z-index:5}
+.ph .gear{position:absolute;top:62px;right:22px;width:46px;height:46px;border-radius:50%;background:#12161c;border:1px solid #2a2f37;display:grid;place-items:center;z-index:5}
+.ph .mark{border-radius:50%;background:#1b1f23;border:1px solid #3b4148;display:grid;place-items:center}
+.ph .mark svg{width:46%;height:46%}
+.ph .center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center;padding:0 34px}
+.ph .t1{font-size:24px;font-weight:700;letter-spacing:-.01em}
+.ph .t2{font-size:17px;color:#9aa3ad}
+.ph .bars{display:flex;gap:4px;align-items:center;height:14px}
+.ph .bars i{width:5px;border-radius:3px;background:#fff;display:block;animation:pheq .9s ease-in-out infinite}
+.ph .bars i:nth-child(1){height:6px}.ph .bars i:nth-child(2){height:10px;animation-delay:.1s}.ph .bars i:nth-child(3){height:14px;animation-delay:.2s}.ph .bars i:nth-child(4){height:10px;animation-delay:.3s}.ph .bars i:nth-child(5){height:6px;animation-delay:.4s}
+@keyframes pheq{50%{transform:scaleY(.45)}}
+.ph .rings{position:relative;width:393px;height:430px;display:grid;place-items:center}
+.ph .rings b{position:absolute;border-radius:50%;animation:phpulse 2.4s ease-out infinite}
+.ph .rings b:nth-child(1){width:400px;height:400px;background:rgba(80,90,100,.25)}
+.ph .rings b:nth-child(2){width:320px;height:320px;background:rgba(110,120,130,.35);animation-delay:.3s}
+.ph .rings b:nth-child(3){width:240px;height:240px;background:rgba(140,148,156,.55);animation-delay:.6s}
+@keyframes phpulse{50%{transform:scale(1.05)}}
+.ph .pl{border-radius:999px;font-weight:600;font-size:17px;padding:16px 20px;width:100%;text-align:center!important}
+.ph .pl.blue{background:#2f6bf2;color:#fff}
+.ph .pl.ghost{background:#20262e}
+.ph .pl.line{border:1px solid #3a414b}
+/* home */
+.ph .homec{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;margin-top:-150px}
+.ph .tabs{position:absolute;left:14px;right:14px;bottom:26px;display:flex;gap:10px;align-items:center;z-index:6}
+.ph .tabbar{flex:1;height:64px;border-radius:32px;background:#16191d;border:1px solid #2b2f35;display:flex;align-items:center;padding:4px;gap:2px}
+.ph .tab{flex:1;height:100%;border-radius:28px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:12px;color:#e8eaed}
+.ph .tab.on{background:#2a2e34;color:#4f86ff}
+.ph .tab svg{width:22px;height:22px}
+.ph .srch{width:64px;height:64px;border-radius:50%;background:#16191d;border:1px solid #2b2f35;display:grid;place-items:center}
+.ph .rf{position:absolute;left:24px;right:0;bottom:116px}
+.ph .rf h4{margin:0 0 12px;font-size:18px;color:#a4abb4;font-weight:600}
+.ph .rfrow{display:flex;gap:12px;overflow:hidden}
+.ph .rfc{flex:0 0 300px;background:#0e151d;border:1px solid #1f2731;border-radius:22px;padding:14px;display:flex;gap:14px;align-items:center}
+.ph .art{width:64px;height:64px;border-radius:10px;flex:0 0 auto;display:grid;place-items:center;font-weight:800;font-size:15px;letter-spacing:.04em;color:rgba(255,255,255,.92)}
+.ph .meta{min-width:0}
+.ph .meta small{color:#8b939d;font-size:13px;font-weight:600;display:block}
+.ph .meta div{font-size:17px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .meta span{color:#9aa3ad;font-size:14.5px;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* miss */
+.ph .miss{flex:1;display:flex;flex-direction:column;padding:130px 26px 40px;gap:22px}
+.ph .miss .t1,.ph .miss .t2{text-align:center}
+.ph .miss .t2{margin-top:-12px}
+.ph .keep{background:#0f1b2e;border:1px solid #23406f;border-radius:22px;padding:18px;display:flex;gap:14px;align-items:flex-start}
+.ph .keep .rad{width:44px;height:44px;flex:0 0 auto;border-radius:50%;background:#16305c;display:grid;place-items:center;position:relative}
+.ph .keep .rad::after{content:"";position:absolute;inset:-4px;border-radius:50%;border:2px solid #4f86ff;opacity:.6;animation:phping 2s ease-out infinite}
+@keyframes phping{to{transform:scale(1.35);opacity:0}}
+.ph .keep h5{margin:0 0 4px;font-size:17px}
+.ph .keep p{margin:0;color:#aab6c6;font-size:14.5px;line-height:1.4}
+.ph .fine{font-size:12.5px;color:#7f8892;text-align:center;line-height:1.4}
+/* search / lyrics */
+.ph .sheet{flex:1;display:flex;flex-direction:column;padding:64px 20px 30px;gap:14px;background:#0b1016}
+.ph .shead{display:flex;align-items:center;gap:12px}
+.ph .back{width:40px;height:40px;border-radius:50%;background:#12161c;border:1px solid #2a2f37;display:grid;place-items:center;flex:none}
+.ph .sheet h3{margin:0;font-size:27px;font-weight:800;line-height:1.1}
+.ph .field{background:#1b2027;border-radius:14px;padding:0 14px;display:flex;gap:10px;align-items:center;min-height:50px}
+.ph .field input{flex:1;min-width:0;border:0;background:none;color:#fff;font:17px -apple-system,system-ui,sans-serif;outline:none;padding:13px 0;user-select:text}
+.ph .field input::placeholder{color:#78818c}
+.ph .lbl{font-size:12px;color:#8b939d;font-weight:600;letter-spacing:.04em;text-transform:uppercase}
+.ph .res{display:flex;flex-direction:column;gap:10px;min-height:0;overflow-y:auto}
+.ph .ri{display:flex;gap:12px;align-items:center;background:#0e151d;border:1px solid #1f2731;border-radius:16px;padding:10px;width:100%}
+.ph .ri .art{width:52px;height:52px;font-size:12px}
+.ph .ri .meta div{font-size:15.5px}
+.ph .ri .meta span{font-size:13px}
+.ph .ri mark{background:none;color:#7fa6ff;font-weight:600}
+.ph .empty{color:#8b939d;font-size:14.5px;padding:6px 2px}
+/* library */
+.ph .lib{flex:1;display:flex;flex-direction:column;padding:64px 18px 110px;gap:12px;overflow-y:auto;scrollbar-width:none;background:#000}
+.ph .lib::-webkit-scrollbar{display:none}
+.ph .libh{display:flex;align-items:center;justify-content:space-between}
+.ph .libh h3{margin:0;font-size:38px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.ph .libh .pillb{display:flex;gap:2px;background:#16191d;border:1px solid #2b2f35;border-radius:24px;padding:4px 6px}
+.ph .libh .pillb button{width:38px;height:34px;display:grid;place-items:center}
+.ph .cnt{color:#8b939d;font-size:15px;margin-top:-6px}
+.ph .still{background:#0f1b2e;border:1px solid #23406f;border-radius:22px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.ph .still .row{display:flex;gap:12px;align-items:center}
+.ph .wave{width:58px;height:58px;border-radius:12px;background:#16305c;display:grid;place-items:center;flex:0 0 auto}
+.ph .prog{height:6px;border-radius:3px;background:#1f2f4d;overflow:hidden}
+.ph .prog i{display:block;height:100%;width:3%;background:#4f86ff;border-radius:3px}
+.ph .still .f2{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:#93a3bb}
+.ph .still .f2 button{color:#ff8a8a;font-size:12.5px;font-weight:600}
+.ph .lrow{position:relative;background:#0e151d;border:1px solid #1f2731;border-radius:20px;padding:12px 44px 12px 12px;display:flex;gap:12px;align-items:center;width:100%}
+.ph .lrow .meta div{font-size:16px}
+.ph .lrow .meta span{font-size:13.5px}
+.ph .more{position:absolute;top:6px;right:8px;color:#8b939d;font-size:19px;line-height:1;letter-spacing:1px;padding:6px 8px;border-radius:12px}
+.ph .badge{position:absolute;right:12px;bottom:12px;font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#12341f;color:#5be08f;white-space:nowrap}
+/* song */
+.ph .song{flex:1;display:flex;flex-direction:column;padding:118px 24px 40px;gap:14px}
+.ph .bigart{width:210px;height:210px;border-radius:18px;align-self:center;font-size:42px}
+.ph .chip{align-self:center;background:rgba(79,134,255,.18);color:#9dbbff;border:1px solid rgba(79,134,255,.45);font-size:13px;font-weight:700;padding:5px 11px;border-radius:999px}
+.ph .chip.g{background:rgba(91,224,143,.14);color:#7fe8a8;border-color:rgba(91,224,143,.4)}
+.ph .rt{text-align:center}
+.ph .rt div{font-size:27px;font-weight:800;letter-spacing:-.01em;line-height:1.15}
+.ph .rt span{font-size:18px;color:#c3c8cf}
+.ph .heard{display:flex;justify-content:space-between;gap:10px;font-size:13px;color:#a7afba;background:rgba(255,255,255,.07);border-radius:14px;padding:10px 14px}
+.ph .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ph .two .pl{font-size:15.5px;padding:14px 8px;background:rgba(255,255,255,.12)}
+.ph .wrong{text-align:center!important;font-size:14px;color:#aab1ba;align-self:center}
+/* settings */
+.ph .set{flex:1;display:flex;flex-direction:column;background:#000}
+.ph .sethead{height:120px;flex:none;display:flex;align-items:flex-end;justify-content:center;padding-bottom:22px;font-size:20px;font-weight:700;background:#111820;border-radius:34px 34px 0 0;margin-top:56px;position:relative}
+.ph .sethead .x{top:24px}
+.ph .setb{flex:1;overflow-y:auto;scrollbar-width:none;padding-bottom:30px}
+.ph .setb::-webkit-scrollbar{display:none}
+.ph .sg{padding:18px 22px 0}
+.ph .sg h6{margin:0 0 6px;font-size:17px;color:#8f99a5;font-weight:700}
+.ph .srow{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid #1d242c;font-size:17px;gap:10px;width:100%}
+.ph .srow small{display:block;font-size:13px;color:#8b939d;margin-top:2px}
+.ph .tg{width:58px;height:34px;border-radius:17px;background:#3a3f46;position:relative;flex:0 0 auto;transition:background .15s}
+.ph .tg::after{content:"";position:absolute;top:3px;left:3px;width:28px;height:28px;border-radius:50%;background:#fff;transition:left .15s}
+.ph .tg[aria-checked="true"]{background:#2f6bf2}
+.ph .tg[aria-checked="true"]::after{left:27px}
+.ph .val{color:#8b939d;font-size:16px;white-space:nowrap}
+.ph .newband{background:#0d1726;border:1px solid #23406f;border-radius:18px;padding:2px 16px;margin-top:6px}
+.ph .newband .srow:last-child{border-bottom:0}
+.ph .newtag{font-size:12px;background:#16305c;color:#9dbbff;border-radius:6px;padding:2px 6px;margin-left:6px}
+/* lock */
+.ph .lock{background:radial-gradient(120% 80% at 30% 10%,#3b4f8f 0%,#1a1f3d 45%,#08090f 100%)}
+.ph .ldate{margin-top:96px;text-align:center;font-size:20px;font-weight:600;color:rgba(255,255,255,.85)}
+.ph .ltime{text-align:center;font-size:96px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-top:2px}
+.ph .notif{margin:auto 12px 150px;background:rgba(40,44,60,.75);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:24px;padding:14px;display:flex;gap:12px;width:calc(100% - 24px);animation:phin .6s cubic-bezier(.2,.8,.2,1) both}
+@keyframes phin{from{transform:translateY(30px);opacity:0}}
+.ph .appic{width:40px;height:40px;border-radius:10px;background:linear-gradient(160deg,#4f86ff,#1b4fd0);display:grid;place-items:center;flex:0 0 auto}
+.ph .notif .top{display:flex;justify-content:space-between;font-size:13px;color:rgba(255,255,255,.7);font-weight:600}
+.ph .notif b{display:block;font-size:15.5px;margin:2px 0}
+.ph .notif p{margin:0;font-size:14.5px;color:rgba(255,255,255,.88);line-height:1.35}
+.ph .homebar{position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:140px;height:5px;border-radius:3px;background:rgba(255,255,255,.85)}
+.ph .unlock{position:absolute;bottom:30px;left:0;right:0;text-align:center!important;font-size:14px;color:rgba(255,255,255,.75)}
+/* overlays */
+.ph .dim{position:absolute;inset:0;background:rgba(0,0,0,.5);z-index:20}
+.ph .menu{position:absolute;right:18px;width:250px;background:#1a1b1e;border:1px solid #33363c;border-radius:26px;padding:8px 0;z-index:21;box-shadow:0 20px 40px rgba(0,0,0,.6)}
+.ph .menu .mh{font-size:13px;color:#8b939d;padding:6px 20px 4px}
+.ph .menu button{display:flex;gap:14px;align-items:center;padding:11px 20px;font-size:16px;width:100%;border-top:1px solid #2a2d33}
+.ph .menu button.first{border-top:0}
+.ph .menu button.red{color:#ff6b6b}
+.ph .menu svg{width:20px;height:20px;flex:0 0 auto}
+.ph .dlg{position:absolute;left:28px;right:28px;top:300px;background:#1a1b1e;border:1px solid #33363c;border-radius:30px;padding:24px 22px 20px;z-index:21;display:flex;flex-direction:column;gap:18px;box-shadow:0 20px 40px rgba(0,0,0,.6)}
+.ph .dlg p{margin:0;font-size:18px;line-height:1.4}
+.ph .dlg .acts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ph .dlg .acts button{background:#2a2c31;border-radius:22px;padding:13px 0;text-align:center!important;font-size:17px;font-weight:600}
+.ph .dlg .acts button.red{color:#ff6b6b}
+.ph .toast{position:absolute;left:24px;right:24px;bottom:112px;background:#2b2f36;color:#fff;border-radius:16px;padding:12px 16px;font-size:14.5px;text-align:center;z-index:25;box-shadow:0 10px 24px rgba(0,0,0,.4)}
+.ph .pulse{animation:phhint 1.6s ease-in-out infinite}
+@keyframes phhint{0%,100%{box-shadow:0 0 0 0 rgba(79,134,255,.75)}50%{box-shadow:0 0 0 9px rgba(79,134,255,0)}}
+.ph .a1{background:linear-gradient(135deg,#e56b2f,#7a1d5f)} .ph .a2{background:linear-gradient(135deg,#1f8f86,#163a6b)} .ph .a3{background:linear-gradient(135deg,#d6b23a,#5e3b12)}
+.ph .a4{background:linear-gradient(135deg,#7b5cff,#1d2f7a)} .ph .a5{background:linear-gradient(135deg,#ef4f86,#4a1442)} .ph .a6{background:linear-gradient(135deg,#3fa34d,#174a2a)}
+@media (prefers-reduced-motion:reduce){.ph *,.ph *::before,.ph *::after{animation:none!important;transition:none!important}.ph .pulse{outline:3px solid #4f86ff;outline-offset:2px}}
+
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <div class="name">Finds, a Shazam concept</div>
-    <div class="note">Concept prototype for a product teardown by Pritesh Kabra. Not affiliated with Apple or Shazam. Songs and artists are invented.</div>
-  </header>
-
-  <main class="stage">
-    <section class="guide" aria-live="polite">
-      <div class="eyebrow" id="g-eyebrow">Step 1 of 8</div>
-      <h1 id="g-title">Tag a song like you do today</h1>
-      <p id="g-body"></p>
-      <div class="why"><b>Why it matters</b><ul id="g-why"></ul></div>
-      <div class="controls">
-        <button class="btn" id="prev" type="button">Back</button>
-        <button class="btn primary" id="next" type="button">Next</button>
-        <div class="dots" id="dots" role="list"></div>
-      </div>
-      <div class="hint">Use the arrow keys, or tap inside the phone where it says so.</div>
-    </section>
-
-    <div class="phone-col">
-      <div class="phone" role="region" aria-label="Phone prototype">
-
-        <!-- 1 tag -->
-        <div class="ph tag" data-screen="tag">
-          <div class="status light"><span>8:12</span><span>5G</span></div>
-          <div class="body">
-            <div class="art" style="background:linear-gradient(135deg,#ffb26b,#ff5e7e 55%,#6a3df0)"></div>
-            <h2>Monsoon Static</h2>
-            <div class="artist">Kavya Rao</div>
-            <div class="row"><button class="pill white" type="button">Play full song</button><button class="pill glass" type="button">Lyrics</button></div>
-            <button class="saved" type="button" data-go="before">
-              <svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="14" fill="#fff"/><path d="M8 14.5l4 4 8-9" fill="none" stroke="#0d47d9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
-              <span><strong>Saved to Finds</strong>We'll bring it back on Sunday, when you can listen.</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- 2 before -->
-        <div class="ph" data-screen="before" hidden>
-          <div class="status"><span>9:41</span><span>5G</span></div>
-          <div class="appbar"><h3>My Music</h3><div class="sub">Today's experience · 142 Shazams</div></div>
-          <div class="list">
-            <div class="item"><div class="art" style="background:linear-gradient(135deg,#ffb26b,#ff5e7e 55%,#6a3df0)"></div><div class="txt"><div class="t">Monsoon Static</div><div class="a">Kavya Rao</div></div><div class="meta">Today</div></div>
-            <div class="item"><div class="art" style="background:linear-gradient(135deg,#0f9b8e,#1a3a5f)"></div><div class="txt"><div class="t">Glasshouse</div><div class="a">Ida Lind</div></div><div class="meta">Sat</div></div>
-            <div class="item"><div class="art" style="background:linear-gradient(135deg,#ffd166,#ef476f)"></div><div class="txt"><div class="t">Halfway Home (Sped Up)</div><div class="a">KIRA</div></div><div class="meta">Thu</div></div>
-            <div class="item"><div class="art" style="background:linear-gradient(135deg,#8338ec,#3a86ff)"></div><div class="txt"><div class="t">Velvet Signal</div><div class="a">Noor Ahmed</div></div><div class="meta">Wed</div></div>
-            <div class="item"><div class="art" style="background:linear-gradient(135deg,#2a9d8f,#e9c46a)"></div><div class="txt"><div class="t">Late Train to Lonavala</div><div class="a">Aarav &amp; The Ghats</div></div><div class="meta">Mon</div></div>
-            <div class="item"><div class="art" style="background:linear-gradient(135deg,#6d597a,#e56b6f)"></div><div class="txt"><div class="t">Paper Lanterns</div><div class="a">Sora Kim</div></div><div class="meta">2 Oct</div></div>
-            <div class="item"><div class="art" style="background:linear-gradient(135deg,#264653,#2a9d8f)"></div><div class="txt"><div class="t">Low Tide Radio</div><div class="a">The Lowlights</div></div><div class="meta">28 Sep</div></div>
-            <div class="item"><div class="art" style="background:linear-gradient(135deg,#f4a261,#e76f51)"></div><div class="txt"><div class="t">Chai at Midnight</div><div class="a">Meher</div></div><div class="meta">21 Sep</div></div>
-          </div>
-          <div class="flag">No context, no reminder. Did she play any of these? Nobody knows, including her.</div>
-        </div>
-
-        <!-- 3 lock -->
-        <div class="ph lock" data-screen="notify" hidden>
-          <div class="status light"><span></span><span>5G</span></div>
-          <div class="clock"><div class="d">Sunday 18 October</div><div class="t">7:00</div></div>
-          <button class="notif" type="button" data-go="inbox">
-            <span class="glyph"><svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><g fill="#fff"><rect x="3" y="8" width="2.6" height="6" rx="1.3"/><rect x="7.4" y="5" width="2.6" height="12" rx="1.3"/><rect x="11.8" y="3" width="2.6" height="16" rx="1.3"/><rect x="16.2" y="7" width="2.6" height="8" rx="1.3"/></g></svg></span>
-            <span class="h"><b>FINDS</b><span>now</span></span>
-            <span class="m">5 songs you found this week</span>
-            <span class="s">Tap to play your Finds mix · 2 min of previews</span>
-          </button>
-          <div class="swipe">Tap the notification</div>
-        </div>
-
-        <!-- 4 inbox -->
-        <div class="ph" data-screen="inbox" hidden>
-          <div class="status"><span>7:00</span><span>5G</span></div>
-          <div class="appbar"><h3>Finds</h3><div class="sub" id="inbox-sub">5 new this week</div></div>
-          <button class="playall" type="button" data-go="triage">
-            <span class="pi"><svg width="14" height="16" viewBox="0 0 14 16" aria-hidden="true"><path d="M2 1.5v13l11-6.5z" fill="#0d47d9"/></svg></span>
-            <span><b>Play Finds mix</b><span>Preview each song, then keep it or let it go</span></span>
-          </button>
-          <div class="list" id="inbox-list"></div>
-          <div class="tabs"><div><i></i>Home</div><div class="on"><i></i>Finds</div><div><i></i>Concerts</div></div>
-        </div>
-
-        <!-- 5 triage -->
-        <div class="ph tri" data-screen="triage" hidden>
-          <div class="status"><span>7:01</span><span>5G</span></div>
-          <div class="count" id="tri-count">1 of 5</div>
-          <div class="card">
-            <div class="art" id="tri-art"></div>
-            <h4 id="tri-title"></h4>
-            <div class="a" id="tri-artist"></div>
-            <div class="ctx" id="tri-ctx"></div>
-            <div class="bar"><i id="tri-bar"></i></div>
-            <div class="times"><span>Preview</span><span>0:30</span></div>
-          </div>
-          <div class="choices">
-            <button class="choice" type="button" data-choice="nope">Not for me<small>clear it</small></button>
-            <button class="choice" type="button" data-choice="later">Later<small>next week</small></button>
-            <button class="choice keep" type="button" data-choice="keep">Keep<small>to Spotify</small></button>
-          </div>
-          <div class="toast" id="toast" role="status"></div>
-        </div>
-
-        <!-- 6 done -->
-        <div class="ph done" data-screen="done" hidden>
-          <div class="status"><span>7:03</span><span>5G</span></div>
-          <div class="body">
-            <div class="ok"><svg width="40" height="40" viewBox="0 0 40 40" aria-hidden="true"><path d="M10 21l7 7 14-15" fill="none" stroke="#12805c" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-            <h3>All caught up</h3>
-            <div class="sum" id="done-sum">3 kept · 1 later · 1 cleared</div>
-            <div class="box">
-              <span id="done-box">Kept songs are in your <b>My Finds</b> playlist in Spotify.</span>
-              <button class="pill" type="button">Open in Spotify</button>
-            </div>
-            <div class="sum" style="font-size:13px" id="done-later">1 song comes back next Sunday.</div>
-          </div>
-          <div class="tabs"><div><i></i>Home</div><div class="on"><i></i>Finds</div><div><i></i>Concerts</div></div>
-        </div>
-
-        <!-- 7 settings -->
-        <div class="ph set" data-screen="settings" hidden>
-          <div class="status"><span>7:04</span><span>5G</span></div>
-          <div class="appbar"><h3 style="font-size:24px">Finds settings</h3></div>
-          <div class="grp">
-            <div class="gl">Bring back my finds</div>
-            <div class="rows" role="radiogroup" aria-label="Bring back my finds">
-              <div class="r"><span>Weekly mix<small>Sundays at 7 pm · 1 notification</small></span><span class="tick">✓</span></div>
-              <div class="r"><span>At listening moments<span class="tagv2">v2</span><small>When headphones or the car connect</small></span><span></span></div>
-              <div class="r"><span>Off<small>Finds still collects your songs</small></span><span></span></div>
-            </div>
-            <div class="gl">Context</div>
-            <div class="rows">
-              <div class="r"><span>Where I heard it<small>Source app and time are always kept</small></span><span class="tick">✓</span></div>
-              <div class="r"><span>Save the place<small>Off by default · stays on this iPhone</small></span><button class="sw" type="button" role="switch" aria-checked="true" aria-label="Save the place" id="placeSwitch"></button></div>
-            </div>
-            <div class="gl">Keep songs to</div>
-            <div class="rows">
-              <div class="r"><span>Spotify</span><span class="tick">✓</span></div>
-              <div class="r"><span>Apple Music</span><span></span></div>
-            </div>
-          </div>
-          <div class="foot">Finds stops on its own after 3 mixes you don't open.</div>
-        </div>
-
-      </div>
-      <div class="caption" id="caption">Riya, in a café in Pune, taps Music Recognition in Control Center.</div>
-    </div>
-  </main>
-</div>
-
 <script>
-(function(){
-  var songs = [
-    {t:"Monsoon Static", a:"Kavya Rao", c:"Café · Koregaon Park · Tue 8:12 pm", art:"linear-gradient(135deg,#ffb26b,#ff5e7e 55%,#6a3df0)"},
-    {t:"Halfway Home (Sped Up)", a:"KIRA", c:"Instagram reel · Thu", art:"linear-gradient(135deg,#ffd166,#ef476f)"},
-    {t:"Velvet Signal", a:"Noor Ahmed", c:"Apple Watch · Wed, at a wedding", art:"linear-gradient(135deg,#8338ec,#3a86ff)"},
-    {t:"Glasshouse", a:"Ida Lind", c:"ChatGPT · Sat", art:"linear-gradient(135deg,#0f9b8e,#1a3a5f)"},
-    {t:"Late Train to Lonavala", a:"Aarav & The Ghats", c:"Control Center · Mon, in a cab", art:"linear-gradient(135deg,#2a9d8f,#e9c46a)"}
-  ];
-  var decisions = [];   // "keep" | "later" | "nope" per song index
-  var current = 0;
+/* Shazam-style iPhone app with the "We'll Keep Looking" concept built in.
+   Independent concept prototype by Pritesh Kabra: not affiliated with Apple or Shazam. Songs and artists are invented. */
+window.SZ = (function () {
+const SONGS = {
+  cd: {t: 'Chandani Dhol (Sped Up)', a: 'Mira Kale', ini: 'CD', c: 'a1', bg: '#5a2a1f', lyr: 'dhol vajto saari raat, chandani zhali'},
+  ml: {t: 'Monsoon Letters', a: 'Aarav & the Lanterns', ini: 'ML', c: 'a2', bg: '#123c4a', lyr: 'paus aala parat, patra bhijli'},
+  nb: {t: 'Nightbus Radio', a: 'Saffron Static', ini: 'NB', c: 'a3', bg: '#4a3410', lyr: 'last bus home, radio low'},
+  gv: {t: 'Gulaal Vaara', a: 'Ved & Sons', ini: 'GV', c: 'a4', bg: '#24205a', lyr: 'dhol vajto gaavat, gulaal udto'},
+  sb: {t: 'Sangeet Bass', a: 'DJ Orbit', ini: 'SB', c: 'a5', bg: '#4a1430', lyr: 'raat ajun baaki, nachuya saare'},
+  rr: {t: 'Raat Ranga', a: 'Kavya Joshi', ini: 'RR', c: 'a6', bg: '#173f25', lyr: 'raat ranga, swapna saare'}
+};
+const HEARD = 'Sat, 18 Oct at 11:42 PM';
+const esc = s => String(s).replace(/[&<>"]/g, m => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[m]));
+const LOGO = '<svg viewBox="0 0 40 40" aria-hidden="true"><g fill="currentColor"><rect x="5" y="15" width="4.5" height="10" rx="2.25"/><rect x="12" y="9" width="4.5" height="22" rx="2.25"/><rect x="19" y="4" width="4.5" height="32" rx="2.25"/><rect x="26" y="10" width="4.5" height="20" rx="2.25"/><rect x="33" y="16" width="4.5" height="8" rx="2.25"/></g></svg>';
+const X = '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4l12 12M16 4L4 16" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>';
+const BACK = '<svg width="20" height="20" viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4 6.5 10l6 6" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const GEAR = '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2" fill="none" stroke="#fff" stroke-width="2.4"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>';
+const SEARCH = c => `<svg width="${c}" height="${c}" viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15 15l5.5 5.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>`;
+const SORT = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3.5 7.5 7 4l3.5 3.5M17 20V4M13.5 16.5 17 20l3.5-3.5" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const MORE = '<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><g fill="#fff"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></g></svg>';
+const WAVE = '<svg width="30" height="22" viewBox="0 0 30 22" aria-hidden="true"><g fill="#7fa6ff"><rect x="0" y="8" width="3.5" height="6" rx="1.75"/><rect x="6.5" y="4" width="3.5" height="14" rx="1.75"/><rect x="13" y="0" width="3.5" height="22" rx="1.75"/><rect x="19.5" y="5" width="3.5" height="12" rx="1.75"/><rect x="26" y="9" width="3.5" height="4" rx="1.75"/></g></svg>';
+const REDO = '<svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><path d="M11 3a8 8 0 1 1-7.4 5" fill="none" stroke="#7fa6ff" stroke-width="2.2" stroke-linecap="round"/><path d="M2 4l1.6 4.2L8 7" fill="none" stroke="#7fa6ff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const MI = {
+  am: '<svg viewBox="0 0 20 20"><rect x="2" y="2" width="16" height="16" rx="4" fill="#fff"/><path d="M11.5 5.5v6.2a1.8 1.8 0 1 1-1.3-1.7V5.5h3" fill="none" stroke="#1a1b1e" stroke-width="1.4"/></svg>',
+  sp: '<svg viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#fff"/><path d="M5.5 8c3-1 6-.7 9 .8M6 10.6c2.5-.8 5-.5 7.5.7M6.6 13c2-.6 4-.4 6 .5" fill="none" stroke="#1a1b1e" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  rm: '<svg viewBox="0 0 20 20"><path d="M4 6h12M8 6V4h4v2M6 6l1 11h6l1-11" fill="none" stroke="#ff6b6b" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  flag: '<svg viewBox="0 0 20 20"><path d="M5 18V3M5 4h9l-2 3.5 2 3.5H5" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>',
+  artist: '<svg viewBox="0 0 20 20"><circle cx="9" cy="7" r="3.5" fill="none" stroke="#fff" stroke-width="1.6"/><path d="M3 17c.8-3 3.2-4.5 6-4.5" fill="none" stroke="#fff" stroke-width="1.6"/></svg>',
+  share: '<svg viewBox="0 0 20 20"><path d="M10 2v11M6.5 5.5 10 2l3.5 3.5M5 9H4v9h12V9h-1" fill="none" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>'
+};
+const art = (id, cls = '') => `<div class="art ${SONGS[id].c} ${cls}">${SONGS[id].ini}</div>`;
 
-  var steps = [
-    {screen:"tag", title:"Tag a song like you do today",
-     body:"Riya hears a song in a café and taps Music Recognition in Control Center. Shazam names it in seconds, as it does today. One new line tells her the song is safe and will come back when she can listen.",
-     why:["User: no extra taps at the moment of hearing.","Business: the core flow is untouched, so recognition speed can't get worse."],
-     cap:"Riya, in a café in Pune, taps Music Recognition in Control Center."},
-    {screen:"before", title:"What happens today: the pile",
-     body:"Her songs sync to a list and to a “My Shazam Tracks” playlist that only grows. Nothing shows where she heard each song or whether she ever played it. Nothing brings them back.",
-     why:["This is the leak: every unplayed find is lost value for her, for Apple Music and for the artist.","Storage is already solved. Coming back is not."],
-     cap:"Today's library: a log of names and dates."},
-    {screen:"notify", title:"Sunday, 7 pm: one notification",
-     body:"Once a week Shazam turns the week's unheard finds into a short mix. One notification, at a time people tend to be home and have headphones on. In v2 the nudge can also come when headphones or the car connect.",
-     why:["User: songs come back when she can actually listen.","Business: a weekly reason to listen, owned by Shazam rather than by the OS or a chatbot."],
-     cap:"Tap the notification to open Finds."},
-    {screen:"inbox", title:"Finds: an inbox, not an archive",
-     body:"Every tag from every surface lands here marked New: the app, Control Center, the Watch, ChatGPT. Each one carries a little context: where it came from and when. The place shows only because Riya turned it on.",
-     why:["Context answers “why did I save this?”, the question that stops people pressing play.","One inbox for all surfaces means tags made outside the app still pay off."],
-     cap:"Tap Play Finds mix."},
-    {screen:"triage", title:"Listen and decide in one tap",
-     body:"The mix plays a 30-second preview of each find. Keep sends it to her playlist in the app she chose, Spotify here. Later brings it back next week. Not for me clears it for good.",
-     why:["Keep is where value is created: a song saved in her streaming app, and a signal for the artist.","Try the three buttons. The inbox updates as you go."],
-     cap:"Preview, then Keep, Later or Not for me."},
-    {screen:"done", title:"An empty inbox is the goal",
-     body:"Once every find is decided, Finds says so and stops. No feed to scroll, no autoplay radio. Kept songs live in her own playlist, in her own app.",
-     why:["Success is finds turned into listens, not time spent in Shazam.","A clear finish makes next Sunday's mix feel light, not like homework."],
-     cap:"Caught up until next week."},
-    {screen:"settings", title:"She stays in control",
-     body:"One reminder a week by default. She can switch to listening moments or turn reminders off. Place is off unless she turns it on, and stays on her phone. Spotify and Apple Music get equal treatment.",
-     why:["Guardrails against notification fatigue and privacy worries.","Equal treatment keeps Shazam neutral, the same concern regulators looked at in 2018."],
-     cap:"Settings: reminders, context and playlist app."},
-    {screen:"done", title:"How we'd know it worked",
-     body:"Test on iOS in two markets for 8 weeks, A/B against today's experience. Ship more widely only if the North Star moves and the guardrails hold.",
-     why:["North Star: find-to-listen rate, the share of new tags played or kept within 7 days.","Inputs: share of tags landing in Finds, mix open rate, triage rate, keep rate.","Guardrails: notification opt-outs, time to result, and an unchanged Apple Music vs Spotify split."],
-     cap:"The outcome we measure: finds that became listens."}
-  ];
-  var step = 0;
+function mount(host) {
+  let S, timers = [], scale = 1;
+  const subs = [];
+  const fresh = () => ({
+    stack: [{s: 'home'}], phase: 0, pending: null, found: false, day: 'sat', keepOn: true, notify: true, days: 30,
+    lib: [{id: 'ml', when: 'Thu, 16 Oct at 9:05 PM', ago: '2 days ago'}, {id: 'nb', when: 'Mon, 13 Oct at 7:40 PM', ago: 'Last week'}],
+    q: '', overlay: null, toast: null, hint: null, lyrNone: false, opened: false, reported: false
+  });
+  S = fresh();
+  host.innerHTML = '<div class="pbox"><div class="ph" role="application" aria-label="Shazam concept phone"></div></div>';
+  const box = host.firstChild, ph = box.firstChild;
 
-  var $ = function(id){return document.getElementById(id);};
-  var screens = document.querySelectorAll(".ph");
+  const top = () => S.stack[S.stack.length - 1];
+  const clear = () => { timers.forEach(clearTimeout); timers = []; };
+  const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+  let toastT;
+  function toast(t) { S.toast = t; render(); clearTimeout(toastT); toastT = setTimeout(() => { S.toast = null; render(); }, 2400); }
+  const nope = () => toast('Not part of this prototype');
+  function go(s, extra) { clear(); S.overlay = null; S.stack.push(Object.assign({s}, extra || {})); render(); }
+  function replace(s, extra) { clear(); S.overlay = null; S.stack[S.stack.length - 1] = Object.assign({s}, extra || {}); render(); }
+  function back() { clear(); S.overlay = null; if (S.stack.length > 1) S.stack.pop(); else S.stack = [{s: 'home'}]; render(); }
+  function inLib(id) { return S.lib.find(x => x.id === id); }
 
-  function renderInbox(){
-    var list = $("inbox-list"); list.innerHTML = "";
-    var left = 0;
-    songs.forEach(function(s,i){
-      var d = decisions[i];
-      if(!d) left++;
-      var row = document.createElement("div"); row.className = "item";
-      var dot = d ? "" : '<span class="new" aria-label="New"></span>';
-      var st = d === "keep" ? '<span class="state kept">Kept</span>' : d === "later" ? '<span class="state">Next week</span>' : d === "nope" ? '<span class="state">Cleared</span>' : "";
-      row.innerHTML = dot + '<div class="art" style="background:'+s.art+'"></div><div class="txt"><div class="t"></div><div class="a"></div><div class="ctx"></div></div>' + st;
-      row.querySelector(".t").textContent = s.t;
-      row.querySelector(".a").textContent = s.a;
-      row.querySelector(".ctx").textContent = s.c;
-      if(d === "nope") row.style.opacity = ".45";
-      list.appendChild(row);
-    });
-    $("inbox-sub").textContent = left ? left + " new this week" : "All caught up";
+  function listen() {
+    S.phase = 0;
+    if (S.found) { later(() => outcome(), 2200); return; }
+    later(() => { S.phase = 1; render(); }, 1600);
+    later(() => { S.phase = 2; render(); }, 3100);
+    later(() => outcome(), 4600);
+  }
+  function outcome() {
+    if (S.found) {
+      if (!inLib('cd')) S.lib.unshift({id: 'cd', when: 'Just now', ago: 'Just now'});
+      return replace('song', {id: 'cd', src: 'now'});
+    }
+    if (S.keepOn && !S.pending) S.pending = {when: HEARD};
+    replace('miss');
+  }
+  function skip() {
+    if (!S.pending) { toast('Nothing to look for yet. Let Shazam miss a song first.'); return false; }
+    clear(); S.day = 'tue'; S.found = true; S.pending = null; S.overlay = null;
+    S.lib = S.lib.filter(x => x.id !== 'cd');
+    S.lib.unshift({id: 'cd', when: HEARD, ago: 'Found today', rescued: true});
+    if (S.notify) S.stack = [{s: 'lock'}];
+    else { S.stack = [{s: 'home'}]; S.toast = 'Found your song from Saturday. It’s in Library.'; }
+    render(); return true;
   }
 
-  function renderTriage(){
-    var s = songs[current];
-    $("tri-count").textContent = (current+1) + " of " + songs.length;
-    $("tri-art").style.background = s.art;
-    $("tri-title").textContent = s.t;
-    $("tri-artist").textContent = s.a;
-    $("tri-ctx").textContent = s.c;
-    var bar = $("tri-bar"); bar.style.animation = "none"; void bar.offsetWidth; bar.style.animation = "";
+  /* ---------- screens ---------- */
+  const H = k => (S.hint && (S.hint === k || (Array.isArray(S.hint) && S.hint.includes(k)))) ? ' pulse' : '';
+  const tabs = on => `<div class="tabs"><div class="tabbar">
+    <button class="tab ${on === 'home' ? 'on' : ''}" data-a="tab-home">${LOGO.replace('aria-hidden="true"', 'aria-hidden="true" width="22" height="22"')}Home</button>
+    <button class="tab ${on === 'lib' ? 'on' : ''}${H('tab-lib')}" data-a="tab-lib"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="3" fill="currentColor" opacity=".9"/><path d="M13 7v7.2a2.2 2.2 0 1 1-1.6-2.1V7h3.6" fill="none" stroke="#16191d" stroke-width="1.6"/></svg>Library</button>
+    <button class="tab" data-a="nope"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.5 9.5 3l2 2a2 2 0 0 0 2.8 2.8l2 2-6.5 6.5-2-2A2 2 0 0 0 5 11.5z" fill="currentColor" transform="translate(2 2)"/></svg>Concerts</button>
+  </div><button class="srch${H('search')}" data-a="search" aria-label="Search">${SEARCH(28)}</button></div>`;
+
+  function home() {
+    const recent = S.lib.slice(0, 3);
+    return `<div class="scr">
+      <button class="gear${H('gear')}" data-a="settings" aria-label="Settings">${GEAR}</button>
+      <div class="homec"><div class="t1" style="font-size:34px;font-weight:800">Tap to Shazam</div>
+        <button class="mark${H('shazam')}" data-a="listen" aria-label="Tap to Shazam" style="width:240px;height:240px;color:#fff">${LOGO}</button></div>
+      ${recent.length ? `<div class="rf"><h4>Recently Found</h4><div class="rfrow">${recent.map(x => `<button class="rfc" data-a="song" data-v="${x.id}">${art(x.id)}<div class="meta"><small>${esc(x.ago)}</small><div>${esc(SONGS[x.id].t)}</div><span>${esc(SONGS[x.id].a)}</span></div></button>`).join('')}</div></div>` : ''}
+      ${tabs('home')}</div>`;
+  }
+  function listenScr() {
+    const p = S.phase;
+    const t = p === 0 ? ['Listening for music', 'Make sure your device can hear the song clearly'] : p === 1 ? ['Expanding search', 'Hang tight'] : ['This is tough', 'Last try'];
+    return `<div class="scr"><button class="x" data-a="cancel" aria-label="Stop listening">${X}</button>
+      <div class="center" style="gap:0">
+        ${p === 0 ? `<div class="rings"><b></b><b></b><b></b><div class="mark" style="width:190px;height:190px;position:relative;color:#fff">${LOGO}</div></div>`
+                  : `<div style="height:430px;display:grid;place-items:center"><div class="mark" style="width:210px;height:210px;color:#fff">${LOGO}</div></div>`}
+        <div style="display:flex;flex-direction:column;align-items:center;gap:12px;margin-top:20px">
+          <div class="bars"><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="t1">${t[0]}</div><div class="t2">${t[1]}</div></div></div></div>`;
+  }
+  function missScr() {
+    if (!S.keepOn) return `<div class="scr" style="background:#1f2225"><button class="x" data-a="close" aria-label="Close">${X}</button>
+      <div class="center" style="justify-content:flex-start;padding-top:210px;gap:18px">
+        <div style="width:90px;height:90px;border-radius:50%;background:#fff;display:grid;place-items:center"><svg width="16" height="52" viewBox="0 0 16 52" aria-hidden="true"><path d="M3 4h10l-2.5 30h-5z" fill="#1f2225"/><circle cx="8" cy="45" r="5" fill="#1f2225"/></svg></div>
+        <div class="t1" style="font-size:34px;font-weight:800">No Result</div><div class="t2" style="margin-top:-8px">We didn’t quite catch that</div>
+        <button class="pl blue" style="margin-top:20px" data-a="retry">Try Again</button></div></div>`;
+    return `<div class="scr" style="background:#11161c"><button class="x" data-a="close" aria-label="Close">${X}</button>
+      <div class="miss">
+        <div class="t1" style="font-size:31px;font-weight:800;margin-top:10px">Not found yet</div>
+        <div class="t2">This one isn’t in our library today</div>
+        <div class="keep"><div class="rad">${REDO}</div><div><h5>We’ll keep looking</h5><p>We’ll check again every day for ${S.days} days as new music arrives${S.notify ? ', and let you know if we find it' : '. Check Library to see if we found it'}.</p></div></div>
+        <button class="pl line${H('lyrics-btn')}" data-a="lyrics">Remember any words? Search lyrics</button>
+        <button class="pl blue" data-a="retry">Try Again</button>
+        <div class="fine" style="margin-top:auto">We saved a sound thumbprint, not a recording.<br>Heard at 11:42 PM · 14 seconds</div></div></div>`;
+  }
+  function results() {
+    const q = S.q.trim().toLowerCase();
+    if (q.length < 2) return `<div class="empty">${top().mode === 'lyrics' ? 'Type any words you remember from the song.' : 'Search songs, artists or lyrics.'}</div>`;
+    const words = q.split(/\s+/).filter(w => w.length >= 2);
+    const ids = Object.keys(SONGS).filter(id => id !== 'cd' || S.found);
+    const hits = ids.map(id => {
+      const s = SONGS[id], hay = (s.lyr + ' ' + s.t + ' ' + s.a).toLowerCase();
+      const n = words.filter(w => hay.includes(w)).length;
+      return {id, n};
+    }).filter(h => h.n > 0).sort((a, b) => b.n - a.n).slice(0, 4);
+    if (!hits.length) return `<div class="empty">No songs match yet.${top().mode === 'lyrics' && S.keepOn ? ' We’re still looking with the sound you caught.' : ''}</div>`;
+    const mark = txt => { let out = esc(txt); words.forEach(w => { out = out.replace(new RegExp('(' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi'), '<mark>$1</mark>'); }); return out; };
+    return hits.map(h => `<button class="ri" data-a="song" data-v="${h.id}" data-src="lyrics">${art(h.id)}<div class="meta"><div>${esc(SONGS[h.id].t)}</div><span>“…${mark(SONGS[h.id].lyr)}…” · ${esc(SONGS[h.id].a)}</span></div></button>`).join('');
+  }
+  function lyricsScr() {
+    const ly = top().mode === 'lyrics';
+    return `<div class="scr"><div class="sheet">
+      <div class="shead"><button class="back" data-a="back" aria-label="Back">${BACK}</button><div class="lbl">${ly ? 'Search by lyrics' : 'Search'}</div></div>
+      <h3>${ly ? 'Remember any words?' : 'Search'}</h3>
+      <label class="field${H('lyr-q')}">${SEARCH(20).replace('currentColor', '#8b939d').replace('currentColor', '#8b939d')}<input id="sz-q" type="search" autocomplete="off" placeholder="${ly ? 'A line from the song' : 'Songs, artists or lyrics'}" value="${esc(S.q)}" aria-label="Search lyrics"></label>
+      <div class="lbl">${ly ? 'Lyrics matches' : 'Results'}</div>
+      <div class="res" id="sz-res">${results()}</div>
+      ${ly && S.keepOn ? `<button class="pl ghost${H('none')}" data-a="none" style="margin-top:auto">None of these. Keep looking</button><div class="fine">The thumbprint keeps working in the background.</div>` : ''}
+    </div></div>`;
+  }
+  function libScr() {
+    const p = S.pending;
+    return `<div class="scr" style="background:#000"><div class="lib" id="sz-lib">
+      <div class="libh"><h3>Library</h3><div class="pillb"><button data-a="nope" aria-label="Sort">${SORT}</button><button data-a="nope" aria-label="More">${MORE}</button></div></div>
+      <div class="cnt">${S.lib.length} song${S.lib.length === 1 ? '' : 's'}${p ? ' · 1 still looking' : ''}</div>
+      ${p ? `<div class="lbl" style="margin-top:4px">Still looking</div>
+      <div class="still${H('still')}"><div class="row"><div class="wave">${WAVE}</div><div class="meta"><div>Song from Saturday night</div><span>${p.when} · 14 sec heard</span></div></div>
+        <div class="prog"><i></i></div><div class="f2"><span>Checking daily · day 1 of ${S.days}</span><button data-a="stop">Stop looking</button></div></div>` : ''}
+      ${S.lib.length ? `<div class="lbl" style="margin-top:4px">Recent</div>` : ''}
+      ${S.lib.map(x => `<div class="lrow" data-row="${x.id}"><button style="display:flex;gap:12px;align-items:center;flex:1;min-width:0" data-a="song" data-v="${x.id}">${art(x.id)}<div class="meta"><div>${esc(SONGS[x.id].t)}</div><span>${esc(SONGS[x.id].a)}</span><span>${esc(x.when)}</span></div></button><button class="more${H('more-' + x.id)}" data-a="more" data-v="${x.id}" aria-label="More options for ${esc(SONGS[x.id].t)}">•••</button>${x.rescued ? '<span class="badge">Found later</span>' : ''}</div>`).join('')}
+      ${!S.lib.length && !p ? '<div class="empty">Songs you Shazam show up here.</div>' : ''}
+    </div>${tabs('lib')}</div>`;
+  }
+  function songScr() {
+    const t = top(), s = SONGS[t.id], item = inLib(t.id);
+    const rescued = item && item.rescued, fromLyr = t.src === 'lyrics' && !item;
+    let chip = '', heard = '';
+    if (rescued) { chip = '<div class="chip">Found 3 days later</div>'; heard = '<span>Heard Sat, 11:42 PM</span><span>You caught 1:04 – 1:18</span>'; }
+    else if (t.src === 'now') { chip = '<div class="chip g">Found</div>'; heard = '<span>Shazamed just now</span><span>Matched at 1:10</span>'; }
+    else if (fromLyr) { chip = '<div class="chip">Lyrics match</div>'; heard = `<span>“${esc(s.lyr.split(',')[0])}”</span><span>Not your song? Go back</span>`; }
+    else if (item) { heard = `<span>Shazamed ${esc(item.when)}</span>`; }
+    return `<div class="scr" style="background:linear-gradient(180deg,${s.bg} 0%,#1a1220 42%,#030a12 78%)"><button class="x" data-a="back" aria-label="Close">${X}</button>
+      <div class="song">${art(t.id, 'bigart')}${chip}
+        <div class="rt"><div>${esc(s.t)}</div><span>${esc(s.a)}</span></div>
+        ${heard ? `<div class="heard">${heard}</div>` : ''}
+        <div class="two"><button class="pl${H('open-Spotify')}" data-a="open" data-v="Spotify">Open in Spotify</button><button class="pl" data-a="open" data-v="Apple Music">Open in Apple Music</button></div>
+        ${item ? `<button class="wrong${H('report')}" data-a="report" data-v="${t.id}">Wrong song? Tell Shazam</button>` : ''}
+      </div></div>`;
+  }
+  function settingsScr() {
+    const tg = (k, label) => `<button class="tg${H('tog-' + k)}" role="switch" aria-checked="${S[k]}" aria-label="${label}" data-a="tog" data-v="${k}"></button>`;
+    return `<div class="scr" style="background:#000"><div class="set">
+      <div class="sethead"><button class="x" data-a="back" aria-label="Close">${X}</button>Settings</div>
+      <div class="setb">
+        <div class="sg"><h6>Preferences</h6>
+          <button class="srow" data-a="nope">iCloud Sync <span class="val">›</span></button>
+          <button class="srow" data-a="nope">Notifications <span class="val">›</span></button>
+          <div class="srow">Identify songs on app start <span class="tg" aria-hidden="true" style="background:#2f6bf2"></span></div></div>
+        <div class="sg"><h6 style="color:#7fa6ff">Keep Looking <span class="newtag">New</span></h6>
+          <div class="newband">
+            <div class="srow"><div>Keep looking after a miss<small>Re-check songs we couldn’t find</small></div>${tg('keepOn', 'Keep looking after a miss')}</div>
+            <button class="srow" data-a="days"><div>Keep thumbprints for</div><span class="val">${S.days} days ›</span></button>
+            <div class="srow"><div>Tell me when it’s found</div>${tg('notify', 'Tell me when it’s found')}</div>
+            <button class="srow" data-a="delprints"><div style="color:#ff8a8a">Delete saved thumbprints</div><span class="val">${S.pending ? 1 : 0}</span></button>
+          </div>
+          <div class="fine" style="text-align:left;margin-top:10px">Shazam saves a thumbprint of the sound (a short list of codes), never the audio itself.</div></div>
+      </div></div></div>`;
+  }
+  function lockScr() {
+    return `<div class="scr lock"><div class="ldate">Tuesday 21 October</div><div class="ltime">7:48</div>
+      <button class="notif${H('notif')}" data-a="notif" aria-label="Open notification: found your song">
+        <div class="appic" style="color:#fff">${LOGO.replace('aria-hidden="true"', 'aria-hidden="true" width="22" height="22"')}</div>
+        <div style="flex:1;min-width:0;text-align:left"><div class="top"><span>SHAZAM</span><span>now</span></div>
+          <b>Found it: your song from Saturday night</b><p>${esc(SONGS.cd.t)} · ${esc(SONGS.cd.a)}. Tap to listen.</p></div></button>
+      <button class="unlock" data-a="unlock">Swipe up to open</button><div class="homebar"></div></div>`;
+  }
+  function overlay() {
+    const o = S.overlay; if (!o) return '';
+    if (o.t === 'menu') {
+      const id = o.id;
+      return `<div class="dim" data-a="closeov"></div><div class="menu" id="sz-menu" style="top:${o.y || 300}px">
+        <div class="mh">Listen On:</div>
+        <button class="first" data-a="open" data-v="Apple Music">${MI.am}Apple Music</button>
+        <button data-a="open" data-v="Spotify">${MI.sp}Spotify</button>
+        <button class="red" data-a="rm" data-v="${id}">${MI.rm}Remove from Library</button>
+        <button class="${H('report')}" data-a="report" data-v="${id}">${MI.flag}Wrong Song? Tell Shazam</button>
+        <button data-a="nope">${MI.artist}Go to Artist</button>
+        <button data-a="nope">${MI.share}Share</button></div>`;
+    }
+    const dlg = (p, a, b) => `<div class="dim" data-a="closeov"></div><div class="dlg" role="dialog"><p>${p}</p><div class="acts">${a}${b}</div></div>`;
+    if (o.t === 'report') return dlg('Song reported! Thanks for letting us know. Would you like to remove this song from your library?', '<button data-a="closeov">Keep</button>', `<button class="red" data-a="rm" data-v="${o.id}">Remove</button>`);
+    if (o.t === 'stop') return dlg('Stop looking for the song from Saturday night? We’ll delete its thumbprint.', '<button data-a="closeov">Keep looking</button>', '<button class="red" data-a="confirmstop">Stop</button>');
+    return '';
   }
 
-  function renderDone(){
-    var k=0,l=0,n=0;
-    decisions.forEach(function(d){ if(d==="keep")k++; else if(d==="later")l++; else if(d==="nope")n++; });
-    if(!decisions.filter(Boolean).length){ k=3; l=1; n=1; }
-    $("done-sum").textContent = k + " kept · " + l + " later · " + n + " cleared";
-    $("done-later").textContent = l ? (l === 1 ? "1 song comes back next Sunday." : l + " songs come back next Sunday.") : "Nothing waiting. See you next Sunday.";
+  function render() {
+    const t = top().s;
+    const scr = {home, listen: listenScr, miss: missScr, lyrics: lyricsScr, library: libScr, song: songScr, settings: settingsScr, lock: lockScr}[t]();
+    const time = S.day === 'sat' ? '11:42' : '7:48';
+    const hadFocus = document.activeElement && document.activeElement.id === 'sz-q';
+    const libScroll = (ph.querySelector('#sz-lib') || {}).scrollTop || 0;
+    ph.innerHTML = `<div class="island"></div>${t === 'lock' ? '' : `<div class="sb"><span>${time}</span><span class="ic"><svg width="18" height="12" viewBox="0 0 18 12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx="1" fill="#fff"/><rect x="5" y="5" width="3" height="7" rx="1" fill="#fff"/><rect x="10" y="2" width="3" height="10" rx="1" fill="#fff"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#fff" opacity=".35"/></svg><svg width="26" height="13" viewBox="0 0 26 13" aria-hidden="true"><rect x=".5" y=".5" width="22" height="12" rx="3.5" stroke="#fff" fill="none" opacity=".5"/><rect x="2" y="2" width="14" height="9" rx="2" fill="#fff"/><rect x="24" y="4" width="2" height="5" rx="1" fill="#fff" opacity=".5"/></svg></span></div>`}${scr}${overlay()}${S.toast ? `<div class="toast" role="status">${esc(S.toast)}</div>` : ''}`;
+    const lib = ph.querySelector('#sz-lib'); if (lib) lib.scrollTop = libScroll;
+    const q = ph.querySelector('#sz-q');
+    if (q) { q.addEventListener('input', () => { S.q = q.value; ph.querySelector('#sz-res').innerHTML = results(); subs.forEach(f => f(S)); }); if (hadFocus) { q.focus(); q.setSelectionRange(q.value.length, q.value.length); } }
+    if (S.overlay && S.overlay.t === 'menu' && S.overlay.y == null) {
+      const row = ph.querySelector(`[data-row="${S.overlay.id}"]`), m = ph.querySelector('#sz-menu');
+      if (row && m) {
+        const pr = ph.getBoundingClientRect(), rr = row.getBoundingClientRect();
+        const y = (rr.bottom - pr.top) / scale - 8;
+        S.overlay.y = Math.max(70, Math.min(y, 852 - m.offsetHeight - 30));
+        m.style.top = S.overlay.y + 'px';
+      }
+    }
+    subs.forEach(f => f(S));
   }
 
-  function show(screen){
-    screens.forEach(function(el){ el.hidden = el.getAttribute("data-screen") !== screen; });
-    if(screen === "inbox") renderInbox();
-    if(screen === "triage") renderTriage();
-    if(screen === "done") renderDone();
-  }
-
-  function go(i){
-    step = Math.max(0, Math.min(steps.length-1, i));
-    var s = steps[step];
-    $("g-eyebrow").textContent = "Step " + (step+1) + " of " + steps.length;
-    $("g-title").textContent = s.title;
-    $("g-body").textContent = s.body;
-    var ul = $("g-why"); ul.innerHTML = "";
-    s.why.forEach(function(w){ var li=document.createElement("li"); li.textContent=w; ul.appendChild(li); });
-    $("caption").textContent = s.cap;
-    $("prev").disabled = step === 0;
-    $("next").textContent = step === steps.length-1 ? "Start over" : "Next";
-    document.querySelectorAll(".dot").forEach(function(d,j){ if(j===step) d.setAttribute("aria-current","step"); else d.removeAttribute("aria-current"); });
-    if(s.screen === "triage" && current >= songs.length){ current = 0; decisions = []; }
-    show(s.screen);
-  }
-
-  function goScreen(name){
-    for(var j=0;j<steps.length;j++){ if(steps[j].screen===name){ go(j); return; } }
-  }
-
-  // dots
-  var dots = $("dots");
-  steps.forEach(function(_,i){
-    var b=document.createElement("button"); b.type="button"; b.className="dot"; b.textContent=i+1;
-    b.setAttribute("aria-label","Go to step "+(i+1)); b.setAttribute("role","listitem");
-    b.addEventListener("click",function(){ go(i); }); dots.appendChild(b);
+  ph.addEventListener('click', e => {
+    const el = e.target.closest('[data-a]'); if (!el || !ph.contains(el)) return;
+    const a = el.dataset.a, v = el.dataset.v;
+    switch (a) {
+      case 'listen': go('listen'); listen(); render(); break;
+      case 'retry': replace('listen'); listen(); render(); break;
+      case 'cancel': back(); break;
+      case 'close': clear(); S.stack = [{s: 'home'}]; S.overlay = null; render(); break;
+      case 'back': back(); break;
+      case 'lyrics': S.q = ''; go('lyrics', {mode: 'lyrics'}); break;
+      case 'search': S.q = ''; clear(); S.overlay = null; S.stack = [{s: 'home'}, {s: 'lyrics', mode: 'search'}]; render(); break;
+      case 'none': S.lyrNone = true; clear(); S.stack = [{s: 'home'}]; toast('We’ll keep looking. Find it in Library.'); break;
+      case 'song': go('song', {id: v, src: el.dataset.src || ''}); break;
+      case 'tab-home': clear(); S.overlay = null; S.stack = [{s: 'home'}]; render(); break;
+      case 'tab-lib': clear(); S.overlay = null; S.stack = [{s: 'library'}]; render(); break;
+      case 'settings': go('settings'); break;
+      case 'tog': S[v] = !S[v]; toast(v === 'keepOn' ? (S.keepOn ? 'Shazam will keep looking after a miss.' : 'Misses won’t be saved. You’ll see today’s “No Result”.') : (S.notify ? 'You’ll get one notification when a song is found.' : 'Found songs will appear in Library, without a notification.')); break;
+      case 'days': S.days = S.days === 30 ? 90 : S.days === 90 ? 7 : 30; render(); break;
+      case 'delprints': if (S.pending) { S.overlay = {t: 'stop'}; render(); } else toast('No saved thumbprints.'); break;
+      case 'stop': S.overlay = {t: 'stop'}; render(); break;
+      case 'confirmstop': S.pending = null; S.overlay = null; toast('Stopped looking. Thumbprint deleted.'); break;
+      case 'more': S.overlay = {t: 'menu', id: v}; render(); break;
+      case 'open': S.opened = true; S.overlay = null; toast('Opens ' + v + '. That part isn’t in this prototype.'); break;
+      case 'report': S.reported = true; S.overlay = {t: 'report', id: v}; render(); break;
+      case 'rm': S.lib = S.lib.filter(x => x.id !== v); S.overlay = null; if (top().s === 'song' && top().id === v) S.stack.pop(); toast('Removed from Library'); break;
+      case 'closeov': S.overlay = null; render(); break;
+      case 'notif': clear(); S.stack = [{s: 'home'}, {s: 'song', id: 'cd', src: 'rescued'}]; render(); break;
+      case 'unlock': clear(); S.stack = [{s: 'home'}]; render(); break;
+      case 'nope': S.overlay = null; nope(); break;
+    }
   });
 
-  $("prev").addEventListener("click",function(){ go(step-1); });
-  $("next").addEventListener("click",function(){
-    if(step === steps.length-1){ decisions=[]; current=0; go(0); } else go(step+1);
-  });
-  document.addEventListener("keydown",function(e){
-    if(e.key==="ArrowRight") go(step+1);
-    if(e.key==="ArrowLeft") go(step-1);
-  });
-  document.querySelectorAll("[data-go]").forEach(function(el){
-    el.addEventListener("click",function(){ goScreen(el.getAttribute("data-go")); });
-  });
+  function fit() {
+    const avW = Math.min(host.getBoundingClientRect().width || 393, 413) - 22;
+    const avH = Math.max(560, window.innerHeight - 150);
+    scale = Math.min(1, avW / 393, avH / 852);
+    ph.style.transform = 'scale(' + scale + ')';
+    box.style.width = 393 * scale + 'px'; box.style.height = 852 * scale + 'px'; box.style.margin = (11 * scale) + 'px';
+  }
+  window.addEventListener('resize', fit);
+  fit(); render();
 
-  var toastTimer;
-  document.querySelectorAll("[data-choice]").forEach(function(b){
-    b.addEventListener("click",function(){
-      var c = b.getAttribute("data-choice");
-      decisions[current] = c;
-      var s = songs[current];
-      var msg = c==="keep" ? "Added “"+s.t+"” to My Finds in Spotify" : c==="later" ? "“"+s.t+"” comes back next Sunday" : "Cleared. We won't bring it back.";
-      $("toast").textContent = msg;
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(function(){ $("toast").textContent=""; }, 2200);
-      current++;
-      if(current >= songs.length){ setTimeout(function(){ goScreen("done"); }, 700); }
-      else renderTriage();
-    });
-  });
-
-  var sw = $("placeSwitch");
-  sw.addEventListener("click",function(){ sw.setAttribute("aria-checked", sw.getAttribute("aria-checked")==="true" ? "false" : "true"); });
-
-  go(0);
+  return {
+    get state() { return S; },
+    top,
+    reset() { clear(); clearTimeout(toastT); S = fresh(); render(); },
+    set(o) { Object.assign(S, o); render(); },
+    hint(k) { S.hint = k; render(); },
+    skip,
+    render,
+    onChange(f) { subs.push(f); }
+  };
+}
+return {mount, HEARD};
 })();
+
+</script>
+<div class="solo">
+  <div class="bar">
+    <span class="brand">Shazam <em>Concept prototype</em></span>
+    <div class="about"><button class="about-btn" id="about-btn" type="button" aria-expanded="false" aria-controls="about-pop" aria-label="About this prototype">i</button>
+      <div class="about-pop" id="about-pop" role="note" hidden><b>Independent product concept.</b> Not affiliated with Apple or Shazam. Songs and artists are invented. Built by Pritesh Kabra.</div></div>
+  </div>
+  <div class="ctrl"><button class="btn" id="skip" type="button">Skip 3 days</button><button class="btn" id="reset" type="button">Start over</button></div>
+  <p class="tiny">It’s Saturday night at a sangeet, and the song playing isn’t in Shazam’s library yet. Tap Shazam, then use “Skip 3 days” to see what happens.</p>
+  <div id="phone"></div>
+  <a class="case" href="walkthrough.html">Guided walkthrough <span aria-hidden="true">→</span></a>
+</div>
+<script>
+const api = SZ.mount(document.getElementById('phone'));
+document.getElementById('skip').onclick = () => api.skip();
+document.getElementById('reset').onclick = () => api.reset();
+const ab = document.getElementById('about-btn'), ap = document.getElementById('about-pop');
+ab.onclick = e => { e.stopPropagation(); ap.hidden = !ap.hidden; ab.setAttribute('aria-expanded', String(!ap.hidden)); };
+document.addEventListener('click', e => { if (!e.target.closest('.about')) { ap.hidden = true; ab.setAttribute('aria-expanded', 'false'); } });
 </script>
 </body>
 </html>
