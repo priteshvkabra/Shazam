@@ -33,6 +33,7 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px
 .btn{font:500 13.5px var(--body);border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:8px 13px;border-radius:8px;cursor:pointer}
 .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
 .btn:disabled{opacity:.45;cursor:default}
+.btn[aria-pressed="true"]{background:var(--accent-soft);border-color:var(--accent);font-weight:600}
 .tiny{font-size:12.5px;color:var(--muted);text-align:center;max-width:380px;margin:0}
 .case{display:inline-flex;align-items:center;gap:8px;font:600 15px var(--body);color:var(--accent);text-decoration:none;border:1.5px solid var(--accent);border-radius:999px;padding:10px 18px}
 .case:hover{background:var(--accent-soft)}
@@ -264,7 +265,7 @@ function mount(host) {
   let S, timers = [], scale = 1;
   const subs = [];
   const fresh = () => ({
-    stack: [{s: 'home'}], phase: 0, pending: null, found: false, day: 'sat', keepOn: true, notify: true, days: 30,
+    stack: [{s: 'home'}], phase: 0, pending: null, found: false, day: 'sat', keepOn: true, notify: true, days: 30, sound: 'music', playing: false, confirmed: false, rejected: false,
     lib: [{id: 'ml', when: 'Thu, 16 Oct at 9:05 PM', ago: '2 days ago'}, {id: 'nb', when: 'Mon, 13 Oct at 7:40 PM', ago: 'Last week'}],
     q: '', overlay: null, toast: null, hint: null, lyrNone: false, opened: false, reported: false
   });
@@ -285,27 +286,35 @@ function mount(host) {
 
   function listen() {
     S.phase = 0;
+    if (S.sound === 'talk') { later(() => outcome(), 2600); return; }
     if (S.found) { later(() => outcome(), 2200); return; }
     later(() => { S.phase = 1; render(); }, 1600);
     later(() => { S.phase = 2; render(); }, 3100);
     later(() => outcome(), 4600);
   }
   function outcome() {
+    if (S.sound === 'talk') return replace('nomusic');
     if (S.found) {
       if (!inLib('cd')) S.lib.unshift({id: 'cd', when: 'Just now', ago: 'Just now'});
       return replace('song', {id: 'cd', src: 'now'});
     }
-    if (S.keepOn && !S.pending) S.pending = {when: HEARD};
-    replace('miss');
+    let merged = false;
+    if (S.keepOn) { if (S.pending) { S.pending.tries++; merged = true; } else S.pending = {when: HEARD, tries: 1, state: 'search'}; }
+    replace('miss', {merged});
   }
   function skip() {
     if (!S.pending) { toast('Nothing to look for yet. Let Shazam miss a song first.'); return false; }
-    clear(); S.day = 'tue'; S.found = true; S.pending = null; S.overlay = null;
+    if (S.rejected) { toast('No new match yet. Shazam is still looking.'); return false; }
+    clear(); S.day = 'tue'; S.pending.state = 'match'; S.overlay = null; S.playing = false;
+    if (S.notify) S.stack = [{s: 'lock'}];
+    else { S.stack = [{s: 'home'}]; S.toast = 'Possible match for Saturday’s song. Check Library.'; }
+    render(); return true;
+  }
+  function yes() {
+    clear(); S.found = true; S.confirmed = true; S.pending = null; S.overlay = null; S.playing = false; S.day = 'tue';
     S.lib = S.lib.filter(x => x.id !== 'cd');
     S.lib.unshift({id: 'cd', when: HEARD, ago: 'Found today', rescued: true});
-    if (S.notify) S.stack = [{s: 'lock'}];
-    else { S.stack = [{s: 'home'}]; S.toast = 'Found your song from Saturday. It’s in Library.'; }
-    render(); return true;
+    S.stack = [{s: 'home'}, {s: 'song', id: 'cd', src: 'rescued'}]; render();
   }
 
   /* ---------- screens ---------- */
@@ -345,11 +354,30 @@ function mount(host) {
     return `<div class="scr" style="background:#11161c"><button class="x" data-a="close" aria-label="Close">${X}</button>
       <div class="miss">
         <div class="t1" style="font-size:31px;font-weight:800;margin-top:10px">Not found yet</div>
-        <div class="t2">This one isn’t in our library today</div>
-        <div class="keep"><div class="rad">${REDO}</div><div><h5>We’ll keep looking</h5><p>We’ll check again every day for ${S.days} days as new music arrives${S.notify ? ', and let you know if we find it' : '. Check Library to see if we found it'}.</p></div></div>
+        <div class="t2">We heard music, but couldn’t name it yet</div>
+        <div class="keep"><div class="rad">${REDO}</div><div><h5>${top().merged ? 'Added to the same search' : 'We’ll keep looking'}</h5><p>${top().merged ? `Your ${S.pending ? S.pending.tries : 2} tries are combined into one search. More sound means a better chance.` : `Over the next ${S.days} days we’ll try other speeds, every country’s catalogue and new releases. ${S.notify ? 'If we find a likely match, we’ll ask you to confirm it.' : 'Check Library to see if we found it.'}`}</p></div></div>
         <button class="pl line${H('lyrics-btn')}" data-a="lyrics">Remember any words? Search lyrics</button>
         <button class="pl blue" data-a="retry">Try Again</button>
-        <div class="fine" style="margin-top:auto">We saved a sound thumbprint, not a recording.<br>Heard at 11:42 PM · 14 seconds</div></div></div>`;
+        <div class="fine" style="margin-top:auto">We heard 14 seconds of music at 11:42 PM.<br>We saved a sound thumbprint (codes), not a recording.</div></div></div>`;
+  }
+  function noMusicScr() {
+    return `<div class="scr" style="background:#1f2225"><button class="x" data-a="close" aria-label="Close">${X}</button>
+      <div class="center" style="justify-content:flex-start;padding-top:200px;gap:18px">
+        <div style="width:90px;height:90px;border-radius:50%;background:#2c3138;display:grid;place-items:center"><svg width="44" height="44" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V6l10-2v12" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="6.5" cy="18" r="2.5" fill="none" stroke="#fff" stroke-width="2"/><circle cx="16.5" cy="16" r="2.5" fill="none" stroke="#fff" stroke-width="2"/><path d="M3 3l18 18" stroke="#ff8a8a" stroke-width="2.2" stroke-linecap="round"/></svg></div>
+        <div class="t1" style="font-size:30px;font-weight:800">We didn’t hear music</div>
+        <div class="t2" style="margin-top:-8px">It sounded like people talking. Nothing was saved.</div>
+        <button class="pl blue" style="margin-top:20px" data-a="retry">Try Again</button>
+        <div class="fine" style="margin-top:6px">Hold your phone closer to the speaker when the song plays.</div></div></div>`;
+  }
+  function confirmScr() {
+    const s = SONGS.cd;
+    return `<div class="scr" style="background:linear-gradient(180deg,${s.bg} 0%,#1a1220 42%,#030a12 78%)"><button class="x" data-a="close" aria-label="Close">${X}</button>
+      <div class="song">${art('cd', 'bigart')}<div class="chip">Possible match</div>
+        <div class="rt"><div>Is this your song?</div><span>${esc(s.t)} · ${esc(s.a)}</span></div>
+        <button class="heard${H('play')}" data-a="play" style="justify-content:center;gap:12px;align-items:center;font-size:15px;color:#fff;font-weight:600">${S.playing ? '<span class="bars"><i></i><i></i><i></i><i></i><i></i></span> Playing the part you heard · 1:04 – 1:18' : '▶ Play the part you heard (1:04 – 1:18)'}</button>
+        <div class="fine">Heard Sat, 18 Oct at 11:42 PM · found 3 days later</div>
+        <div class="two"><button class="pl ghost" data-a="no">No, keep looking</button><button class="pl blue${H('yes')}" data-a="yes">Yes, that’s it</button></div>
+      </div></div>`;
   }
   function results() {
     const q = S.q.trim().toLowerCase();
@@ -382,8 +410,9 @@ function mount(host) {
       <div class="libh"><h3>Library</h3><div class="pillb"><button data-a="nope" aria-label="Sort">${SORT}</button><button data-a="nope" aria-label="More">${MORE}</button></div></div>
       <div class="cnt">${S.lib.length} song${S.lib.length === 1 ? '' : 's'}${p ? ' · 1 still looking' : ''}</div>
       ${p ? `<div class="lbl" style="margin-top:4px">Still looking</div>
-      <div class="still${H('still')}"><div class="row"><div class="wave">${WAVE}</div><div class="meta"><div>Song from Saturday night</div><span>${p.when} · 14 sec heard</span></div></div>
-        <div class="prog"><i></i></div><div class="f2"><span>Checking daily · day 1 of ${S.days}</span><button data-a="stop">Stop looking</button></div></div>` : ''}
+      <div class="still${H('still')}"><div class="row"><div class="wave">${WAVE}</div><div class="meta"><div>Song from Saturday night</div><span>${p.when} · 14 sec of music${p.tries > 1 ? ' · ' + p.tries + ' tries combined' : ''}</span></div></div>
+        ${p.state === 'match' ? `<button class="pl blue" data-a="check" style="padding:11px;font-size:15px">Possible match found. Is this it?</button>` : `<div class="fine" style="text-align:left">Trying other speeds, every country’s catalogue and new releases</div><div class="prog"><i style="width:${S.day === 'sat' ? 3 : 13}%"></i></div>`}
+        <div class="f2"><span>Day ${S.day === 'sat' ? 1 : 4} of ${S.days}</span><button data-a="stop">Stop looking</button></div></div>` : ''}
       ${S.lib.length ? `<div class="lbl" style="margin-top:4px">Recent</div>` : ''}
       ${S.lib.map(x => `<div class="lrow" data-row="${x.id}"><button style="display:flex;gap:12px;align-items:center;flex:1;min-width:0" data-a="song" data-v="${x.id}">${art(x.id)}<div class="meta"><div>${esc(SONGS[x.id].t)}</div><span>${esc(SONGS[x.id].a)}</span><span>${esc(x.when)}</span></div></button><button class="more${H('more-' + x.id)}" data-a="more" data-v="${x.id}" aria-label="More options for ${esc(SONGS[x.id].t)}">•••</button>${x.rescued ? '<span class="badge">Found later</span>' : ''}</div>`).join('')}
       ${!S.lib.length && !p ? '<div class="empty">Songs you Shazam show up here.</div>' : ''}
@@ -393,7 +422,7 @@ function mount(host) {
     const t = top(), s = SONGS[t.id], item = inLib(t.id);
     const rescued = item && item.rescued, fromLyr = t.src === 'lyrics' && !item;
     let chip = '', heard = '';
-    if (rescued) { chip = '<div class="chip">Found 3 days later</div>'; heard = '<span>Heard Sat, 11:42 PM</span><span>You caught 1:04 – 1:18</span>'; }
+    if (rescued) { chip = '<div class="chip">Found 3 days later · confirmed by you</div>'; heard = '<span>Heard Sat, 11:42 PM</span><span>You caught 1:04 – 1:18</span>'; }
     else if (t.src === 'now') { chip = '<div class="chip g">Found</div>'; heard = '<span>Shazamed just now</span><span>Matched at 1:10</span>'; }
     else if (fromLyr) { chip = '<div class="chip">Lyrics match</div>'; heard = `<span>“${esc(s.lyr.split(',')[0])}”</span><span>Not your song? Go back</span>`; }
     else if (item) { heard = `<span>Shazamed ${esc(item.when)}</span>`; }
@@ -426,10 +455,10 @@ function mount(host) {
   }
   function lockScr() {
     return `<div class="scr lock"><div class="ldate">Tuesday 21 October</div><div class="ltime">7:48</div>
-      <button class="notif${H('notif')}" data-a="notif" aria-label="Open notification: found your song">
+      <button class="notif${H('notif')}" data-a="notif" aria-label="Open notification: possible match for your song">
         <div class="appic" style="color:#fff">${LOGO.replace('aria-hidden="true"', 'aria-hidden="true" width="22" height="22"')}</div>
         <div style="flex:1;min-width:0;text-align:left"><div class="top"><span>SHAZAM</span><span>now</span></div>
-          <b>Found it: your song from Saturday night</b><p>${esc(SONGS.cd.t)} · ${esc(SONGS.cd.a)}. Tap to listen.</p></div></button>
+          <b>Is this your song from Saturday night?</b><p>We think we found it. Tap to hear the part you caught.</p></div></button>
       <button class="unlock" data-a="unlock">Swipe up to open</button><div class="homebar"></div></div>`;
   }
   function overlay() {
@@ -453,7 +482,7 @@ function mount(host) {
 
   function render() {
     const t = top().s;
-    const scr = {home, listen: listenScr, miss: missScr, lyrics: lyricsScr, library: libScr, song: songScr, settings: settingsScr, lock: lockScr}[t]();
+    const scr = {home, listen: listenScr, miss: missScr, nomusic: noMusicScr, confirm: confirmScr, lyrics: lyricsScr, library: libScr, song: songScr, settings: settingsScr, lock: lockScr}[t]();
     const time = S.day === 'sat' ? '11:42' : '7:48';
     const hadFocus = document.activeElement && document.activeElement.id === 'sz-q';
     const libScroll = (ph.querySelector('#sz-lib') || {}).scrollTop || 0;
@@ -499,7 +528,10 @@ function mount(host) {
       case 'report': S.reported = true; S.overlay = {t: 'report', id: v}; render(); break;
       case 'rm': S.lib = S.lib.filter(x => x.id !== v); S.overlay = null; if (top().s === 'song' && top().id === v) S.stack.pop(); toast('Removed from Library'); break;
       case 'closeov': S.overlay = null; render(); break;
-      case 'notif': clear(); S.stack = [{s: 'home'}, {s: 'song', id: 'cd', src: 'rescued'}]; render(); break;
+      case 'notif': case 'check': clear(); S.playing = false; S.stack = [{s: 'home'}, {s: 'confirm'}]; render(); break;
+      case 'play': S.playing = !S.playing; render(); break;
+      case 'yes': yes(); break;
+      case 'no': S.rejected = true; if (S.pending) S.pending.state = 'search'; clear(); S.playing = false; S.stack = [{s: 'home'}]; toast('Thanks. We’ll keep looking and won’t suggest this song again.'); break;
       case 'unlock': clear(); S.stack = [{s: 'home'}]; render(); break;
       case 'nope': S.overlay = null; nope(); break;
     }
@@ -522,6 +554,8 @@ function mount(host) {
     set(o) { Object.assign(S, o); render(); },
     hint(k) { S.hint = k; render(); },
     skip,
+    yes,
+    setSound(v) { S.sound = v; render(); },
     render,
     onChange(f) { subs.push(f); }
   };
@@ -536,8 +570,9 @@ return {mount, HEARD};
     <div class="about"><button class="about-btn" id="about-btn" type="button" aria-expanded="false" aria-controls="about-pop" aria-label="About this prototype">i</button>
       <div class="about-pop" id="about-pop" role="note" hidden><b>Independent product concept.</b> Not affiliated with Apple or Shazam. Songs and artists are invented. Built by Pritesh Kabra.</div></div>
   </div>
+  <div class="ctrl" role="group" aria-label="What's playing"><span class="tiny" style="align-self:center">Playing:</span><button class="btn" id="snd-music" type="button" aria-pressed="true">A song</button><button class="btn" id="snd-talk" type="button" aria-pressed="false">People talking</button></div>
   <div class="ctrl"><button class="btn" id="skip" type="button">Skip 3 days</button><button class="btn" id="reset" type="button">Start over</button></div>
-  <p class="tiny">It’s Saturday night at a sangeet, and the song playing isn’t in Shazam’s library yet. Tap Shazam, then use “Skip 3 days” to see what happens.</p>
+  <p class="tiny">Saturday night at a sangeet: the song playing isn’t one Shazam can name today. Tap Shazam, then use “Skip 3 days”. Switch to “People talking” to see that noise isn’t saved.</p>
   <div id="phone"></div>
   <a class="case" href="walkthrough.html">Guided walkthrough <span aria-hidden="true">→</span></a>
 </div>
@@ -545,6 +580,9 @@ return {mount, HEARD};
 const api = SZ.mount(document.getElementById('phone'));
 document.getElementById('skip').onclick = () => api.skip();
 document.getElementById('reset').onclick = () => api.reset();
+const sm = document.getElementById('snd-music'), stk = document.getElementById('snd-talk');
+sm.onclick = () => api.setSound('music'); stk.onclick = () => api.setSound('talk');
+api.onChange(s => { sm.setAttribute('aria-pressed', String(s.sound === 'music')); stk.setAttribute('aria-pressed', String(s.sound === 'talk')); });
 const ab = document.getElementById('about-btn'), ap = document.getElementById('about-pop');
 ab.onclick = e => { e.stopPropagation(); ap.hidden = !ap.hidden; ab.setAttribute('aria-expanded', String(!ap.hidden)); };
 document.addEventListener('click', e => { if (!e.target.closest('.about')) { ap.hidden = true; ab.setAttribute('aria-expanded', 'false'); } });
