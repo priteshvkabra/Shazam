@@ -67,8 +67,11 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px
 
 /* Phone: Shazam iOS look (dark), drawn at iPhone 16 size 393 x 852 and scaled to fit. */
 .pbox{position:relative;flex:none}
+.pbox::before,.pbox::after{content:"";position:absolute;width:4px;border-radius:2px;background:#585c64}
+.pbox::before{left:-18px;top:21%;height:12%;box-shadow:0 -10.5% 0 0 #585c64;background:linear-gradient(#585c64 0 45%,transparent 45% 55%,#585c64 55%)}
+.pbox::after{right:-18px;top:28.5%;height:9%}
 .ph{width:393px;height:852px;border-radius:56px;background:#000;position:absolute;top:0;left:0;transform-origin:top left;
-  box-shadow:0 0 0 10px #1c1f25,0 0 0 11px #3a3f48,0 30px 60px rgba(10,20,40,.28);overflow:hidden;
+  box-shadow:0 0 0 11px #060709,0 0 0 14px #3e424a,0 0 0 15px #767b84,0 30px 60px rgba(10,20,40,.28);overflow:hidden;
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",system-ui,sans-serif;color:#fff;-webkit-font-smoothing:antialiased;
   font-size:15px;line-height:1.35;user-select:none;-webkit-tap-highlight-color:transparent}
 .ph *{box-sizing:border-box}
@@ -544,7 +547,7 @@ function mount(host) {
     const avH = Math.max(560, window.innerHeight - 150);
     scale = Math.min(1, avW / 393, avH / 852);
     ph.style.transform = 'scale(' + scale + ')';
-    box.style.width = 393 * scale + 'px'; box.style.height = 852 * scale + 'px'; box.style.margin = (11 * scale) + 'px';
+    box.style.width = 393 * scale + 'px'; box.style.height = 852 * scale + 'px'; box.style.margin = (16 * scale) + 'px ' + (22 * scale) + 'px';
   }
   window.addEventListener('resize', fit);
   fit(); render();
